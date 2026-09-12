@@ -10,9 +10,10 @@ import { CompanionService } from './companion.ts';
 import { CompanionError } from '../companion/types.ts';
 
 /** Local single-user runtime. Authentication must be added before public hosting. */
-export function createAudioServer(provider: SpeechProvider, publicDir: string, updateKey?: (key: string, provider?: ProviderId) => Promise<void>, settings?: { read: () => AudioSettings; select: (selection: AudioSelection) => Promise<void> }, recommendations = new ExaRecommendations(), companion = { service: new CompanionService(), updateExa: undefined as ((key: string) => Promise<void>) | undefined }) {
+export function createAudioServer(provider: SpeechProvider, publicDir: string, updateKey?: (key: string, provider?: ProviderId) => Promise<void>, settings?: { read: () => AudioSettings; select: (selection: AudioSelection) => Promise<void> }, recommendations = new ExaRecommendations(), updateSearchKey?: (key: string) => Promise<void>, companion = { service: new CompanionService(), updateExa: undefined as ((key: string) => Promise<void>) | undefined }) {
   let active = 0;
   let searching = false;
+  let updatingSearchKey = false;
   let updatingKey = false;
   let discussing = false;
   const staticFiles: Record<string, [string, string]> = {
@@ -58,6 +59,23 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string, u
       return;
     }
     if (req.method === 'GET' && path === '/api/books/recommendations/config') return json(res, 200, { configured: recommendations.configured });
+    if (path === '/api/books/recommendations/key' && ['PUT', 'DELETE'].includes(req.method ?? '')) {
+      let locked = false;
+      try {
+        if (req.headers['x-bookworm-client'] !== 'audio-v1' || !req.headers['content-type']?.startsWith('application/json')) throw new SpeechError('INVALID_REQUEST', 'Use the BookWorm settings form.', 400);
+        if (!updateSearchKey) throw new SpeechError('SETTINGS_UNAVAILABLE', 'Search key settings are unavailable.', 503);
+        if (searching || updatingSearchKey) throw new SpeechError('SEARCH_BUSY', 'Wait for book search to finish, then retry.', 409);
+        updatingSearchKey = true; locked = true;
+        const body = await readJson(req) as { apiKey?: unknown };
+        if (!body || typeof body !== 'object' || Array.isArray(body)) throw new SpeechError('INVALID_REQUEST', 'Expected a settings object.', 400);
+        await updateSearchKey(req.method === 'DELETE' ? '' : validateApiKey(body.apiKey));
+        json(res, 200, { saved: true });
+      } catch (error) {
+        const safe = error instanceof SpeechError ? error : new SpeechError('KEY_SAVE_FAILED', 'The search key could not be saved.', 500);
+        json(res, safe.status, { error: { code: safe.code, message: safe.message } });
+      } finally { if (locked) updatingSearchKey = false; }
+      return;
+    }
     if (req.method === 'POST' && path === '/api/books/recommendations') {
       const controller = new AbortController();
       const disconnected = () => { if (!res.writableEnded) controller.abort(); };
@@ -65,7 +83,7 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string, u
       res.on('close', disconnected);
       try {
         if (req.headers['x-bookworm-client'] !== 'audio-v1' || !req.headers['content-type']?.startsWith('application/json')) throw new SpeechError('INVALID_REQUEST', 'Use the book recommendation form.', 400);
-        if (searching) throw new SpeechError('SEARCH_BUSY', 'A book search is already running. Wait and retry.', 429);
+        if (searching || updatingSearchKey) throw new SpeechError('SEARCH_BUSY', 'A book search is already running. Wait and retry.', 429);
         searching = true; counted = true;
         const result = await recommendations.search(await readJson(req), controller.signal);
         if (!controller.signal.aborted) json(res, 200, result);

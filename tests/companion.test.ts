@@ -106,7 +106,7 @@ test('missing keys and provider failures are visible and never echo private upst
 test('local companion endpoints retain origin guards, body caps, key removal and Gemini response', async t => {
   let exaKey = '';
   const service = new CompanionService(() => 'fixture', () => exaKey, async () => response('answer', answer));
-  const server = createAudioServer(new OpenRouterSpeech(''), '/tmp/no-public', undefined, undefined, undefined, { service, updateExa: async key => { exaKey = key; } });
+  const server = createAudioServer(new OpenRouterSpeech(''), '/tmp/no-public', undefined, undefined, undefined, undefined, { service, updateExa: async key => { exaKey = key; } });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve)); t.after(() => new Promise<void>(resolve => server.close(() => resolve())));
   const address = server.address(); assert(address && typeof address !== 'string'); const base = `http://127.0.0.1:${address.port}/api/companion`;
   const headers = { 'Content-Type': 'application/json', 'X-Bookworm-Client': 'audio-v1' };

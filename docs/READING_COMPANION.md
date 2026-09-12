@@ -157,10 +157,18 @@ Hosted source is built and Worker tests pass; live hosted companion behavior,
 physical mobile devices, comprehensive spoiler resistance and large-book semantic
 retrieval remain unverified.
 
+## Integration with current main
+
+The hosted recommendation settings fix from PR #6 is retained. Recommendations
+and companion research keep separate Exa settings and routes. After integration,
+`pnpm check` passed with **44 application tests and 11 Worker tests**. The new,
+unapplied companion migration is `0003_companion_exa.sql`, following the already
+applied recommendation migration.
+
 ## Deployment boundary
 
 Before deploying this branch, apply additive migration
-`migrations/0002_companion_exa.sql` to the existing D1 database, following
+`migrations/0003_companion_exa.sql` to the existing D1 database, following
 `docs/DEPLOYMENT.md`. Do not rename the Worker, account or database. No migration
 was applied remotely and no deployment was performed for this feature. Hosted
 acceptance needs a fresh browser session with its own OpenRouter and Exa keys.

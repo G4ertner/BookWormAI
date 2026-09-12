@@ -1,18 +1,20 @@
+import { loadApiKey, saveApiKey } from './credentials.ts';
 import { fileURLToPath } from 'node:url';
 import { createAudioServer } from './app.ts';
 import { ExaRecommendations } from './recommendations.ts';
 import { NarrationService } from './narration.ts';
 import { resolve } from 'node:path';
-import { loadApiKey, saveApiKey } from './credentials.ts';
 
 const host = process.env.HOST || '127.0.0.1';
 if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('This single-user MVP binds to loopback only. Add authentication before enabling remote access.');
 const port = Number(process.env.PORT || 4310);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('PORT must be between 1024 and 65535.');
 const provider = await NarrationService.open(resolve('.data'), { openrouter: process.env.OPENROUTER_API_KEY, openai: process.env.OPENAI_API_KEY, fishVoice: process.env.FISH_AUDIO_VOICE_ID });
+const searchKeyPath = resolve('.data/exa-settings.json');
+const recommendations = new ExaRecommendations(await loadApiKey(searchKeyPath, process.env.EXA_API_KEY || ''));
 const exaPath = resolve('.data/companion-exa.json');
 let exaKey = await loadApiKey(exaPath, process.env.EXA_API_KEY || '');
-const server = createAudioServer(provider, fileURLToPath(new URL('../public/', import.meta.url)), (key, target) => provider.updateKey(key, target), { read: () => provider.settings(), select: selection => provider.select(selection) }, new ExaRecommendations(process.env.EXA_API_KEY), {
+const server = createAudioServer(provider, fileURLToPath(new URL('../public/', import.meta.url)), (key, target) => provider.updateKey(key, target), { read: () => provider.settings(), select: selection => provider.select(selection) }, recommendations, async key => { await saveApiKey(searchKeyPath, key); recommendations.setKey(key); }, {
   service: provider.companion(() => exaKey),
   updateExa: async key => { await saveApiKey(exaPath, key); exaKey = key; },
 });

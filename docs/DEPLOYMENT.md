@@ -21,7 +21,7 @@ history remains valid. Add a new SQL migration for schema changes; never edit an
 already-applied migration. Keep both historical tables, including the old private
 settings table; public sessions cannot access the old email-owned records.
 
-The reading-companion branch adds `0002_companion_exa.sql` for per-session Exa
+The reading-companion branch adds `0003_companion_exa.sql` for per-session Exa
 keys. Apply it before publishing that feature. OpenRouter discussion uses the
 existing session's OpenRouter key independently of narration selection. No shared
 Exa key is supplied; each browser session can save its own in Reader settings.
@@ -30,7 +30,10 @@ See `docs/READING_COMPANION.md` for the feature's separate acceptance evidence.
 The demo is public and supplies no operator provider key. A 256-bit secure HttpOnly
 SameSite=Strict cookie scopes API settings to a browser session. Only the token hash
 is stored. Settings expire after 24 hours without a write; hourly cleanup removes
-expired rows. Keys are server-side and readable to database administrators, never
+expired rows. Exa settings use the independent `recommendation_settings` table
+(migration `0002_recommendation_keys.sql`); apply it before deploying this version.
+Each browser enters its own Exa key through Recommendation settings. No shared Exa
+secret is used. Keys are server-side and readable to database administrators, never
 returned by the API. On shared browser profiles, remove keys after use.
 
 Requests are rate-limited per IP/Cloudflare location. Body, passage, audio-size and

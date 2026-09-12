@@ -43,7 +43,7 @@ function addToLibrary(book){
   notify(storageOkay?`“${book.title}” is in your library.`:'Added for this session; browser storage is full.');
 }
 const catalogUI=mountCatalog({escapeHTML,parseEpub:file=>window.parseBookWormAIEPUB(file),isReadable:validBook,shelvedIds:()=>new Set(books.map(b=>b.gutenbergId).filter(Number.isInteger)),addToLibrary});
-const recommendationsUI=mountRecommendations({shelvedIds:()=>new Set(books.map(b=>b.gutenbergId).filter(Number.isInteger)),select:book=>{clearTimeout(catalogTimer);$('#catalog-query').value='';chooseSource('catalog');catalogUI.showRecommendation(book);$('#catalog-tab').focus();}});
+const recommendationsUI=mountRecommendations({settings:()=>{$('#add-dialog').close();dialog('settings-dialog');$('#exa-key').focus()},shelvedIds:()=>new Set(books.map(b=>b.gutenbergId).filter(Number.isInteger)),select:book=>{clearTimeout(catalogTimer);$('#catalog-query').value='';chooseSource('catalog');catalogUI.showRecommendation(book);$('#catalog-tab').focus();}});
 function catalog(){catalogUI.render()}
 let catalogTimer;
 $('#catalog-form').addEventListener('submit',event=>{event.preventDefault();clearTimeout(catalogTimer);void catalogUI.search($('#catalog-query').value)});
