@@ -1,6 +1,7 @@
 import html from '../simple/index.html';
 import client from '../../dist/public/simple.js?raw';
 import { OpenRouterSpeech, OpenAISpeech, SpeechError, validateText } from './speech.ts';
+import { ExaRecommendations } from './recommendations.ts';
 import { OPENAI_VOICES } from '../audio/catalog.ts';
 
 interface Statement { bind(...values: unknown[]): Statement; first(): Promise<any>; run(): Promise<unknown> }
@@ -53,11 +54,18 @@ export default {
         return new Response(html, {headers:responseHeaders});
       }
       if (request.method === 'GET' && url.pathname === '/assets/simple.js') return new Response(client, { headers: { ...headers, 'Content-Type': 'text/javascript; charset=utf-8' } });
-      if (!['/api/audio/config','/api/audio/key','/api/audio/selection','/api/audio/speech'].includes(url.pathname)) return json({error:{code:'NOT_FOUND',message:'Not found.'}},404);
+      if (!['/api/books/recommendations/config','/api/books/recommendations','/api/audio/config','/api/audio/key','/api/audio/selection','/api/audio/speech'].includes(url.pathname)) return json({error:{code:'NOT_FOUND',message:'Not found.'}},404);
       if (!validToken) reject('SESSION_REQUIRED','Open the reader and allow cookies, then retry.',401);
       // Cookie is a random bearer secret. Only its hash is stored in D1.
       const user = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(validToken!))),v=>v.toString(16).padStart(2,'0')).join('');
       if (!(await env.API_LIMIT.limit({key:`bookworm:${request.headers.get('CF-Connecting-IP') ?? user}`})).success) reject('RATE_LIMITED','Too many requests. Wait a minute and retry.',429);
+      // No service-operated search key on the public demo. A hosted, per-user
+      // credential flow must be scoped before enabling paid search here.
+      if (url.pathname.startsWith('/api/books/recommendations')) {
+        if (request.method === 'GET' && url.pathname.endsWith('/config')) return json({configured:false});
+        if (request.method === 'POST' && url.pathname === '/api/books/recommendations') return json(await new ExaRecommendations().search(await readBody(request), request.signal));
+        return json({error:{code:'METHOD_NOT_ALLOWED',message:'Unsupported method.'}},405);
+      }
       const now = Math.floor(Date.now()/1000);
       if (!env.DB) reject('SETTINGS_UNAVAILABLE', 'Audio settings are temporarily unavailable.', 503);
       const settings = await env.DB.prepare('SELECT * FROM public_audio_settings WHERE user_id = ? AND expires_at > ?').bind(user,now).first() ?? {provider:'openrouter',voice:'marin',openrouter_key:'',openai_key:''};

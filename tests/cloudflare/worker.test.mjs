@@ -77,3 +77,18 @@ test('rate limit blocks API work',async()=>{
  const original=env.API_LIMIT.limit;env.API_LIMIT.limit=async()=>({success:false});
  try {assert.equal((await req()).status,429);} finally {env.API_LIMIT.limit=original;}
 });
+
+test('public book recommendations retain session/origin/rate guards and never use a shared key',async()=>{
+ assert.equal((await req('/api/books/recommendations/config','GET',undefined,'')).status,401);
+ assert.deepEqual(await (await req('/api/books/recommendations/config')).json(),{configured:false});
+ assert.equal((await req('/api/books/recommendations','POST',{query:'adventure'},'alice',{Origin:'https://evil.test'})).status,403);
+ assert.equal((await req('/api/books/recommendations','POST',{query:'ab'})).status,400);
+ const original=globalThis.fetch;let calls=0;
+ try {
+  globalThis.fetch=async()=>{calls++;throw new Error('No provider calls without a scoped key');};
+  const response=await req('/api/books/recommendations','POST',{query:'adventure'});
+  assert.equal(response.status,503);assert.equal((await response.json()).error.code,'SEARCH_KEY_MISSING');assert.equal(calls,0);
+ } finally {globalThis.fetch=original;}
+ const limit=env.API_LIMIT.limit;env.API_LIMIT.limit=async()=>({success:false});
+ try {assert.equal((await req('/api/books/recommendations','POST',{query:'adventure'})).status,429);} finally {env.API_LIMIT.limit=limit;}
+});

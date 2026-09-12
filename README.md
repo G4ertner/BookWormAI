@@ -24,6 +24,10 @@ Never overwrite an existing `.env`. Keys saved in settings override environment 
 - **Add book → Project Gutenberg:** search by title/author, click Add, then choose
   the downloaded EPUB when prompted. If the picker does not open automatically,
   click “Choose the EPUB you just downloaded.”
+- **Add book → For you:** describe a topic or mood to find Gutenberg book matches.
+  Local setup requires server-only `EXA_API_KEY` in `.env`, then restart the server.
+  Choose a result to continue through the existing Gutenberg import flow.
+  See [recommendation setup and limits](docs/BOOK_RECOMMENDATIONS.md).
 - Open the book on your shelf, select a chapter, and press Play. Narration prepares
   one passage at a time; speed, chapters, and saved position remain available.
 - “Key saved” means stored, not accepted by the provider. Playback reports rejected

@@ -2,6 +2,17 @@
 
 - **Goal:** one complete reader, retaining book import, Gutenberg discovery, narration,
   provider settings and resume. The simplified UI is now the only app at `/` and `/simple/`.
+- **Active feature:** `feature/book-recommendations` adds Add book → For you for
+  free Gutenberg matches via server-side Exa. Local API key loaded; setup and
+  acceptance are in `docs/BOOK_RECOMMENDATIONS.md`. User authorized merge to main;
+  Git/PR history identifies delivery. Deployment remains separate.
+  Typecheck, both builds, 32 app tests and 7 Worker tests passed; fixture browser
+  recommendation → picker → shelf → chapter plus error/cancel/retry checks passed.
+  Feature preview: http://127.0.0.1:4393/ (`PORT=4393 pnpm start`).
+  Preview restarted after the user saved `EXA_API_KEY`; config reports `configured: true`.
+  Live Exa acceptance passed: the Sherlock Holmes query returned six relevant
+  Gutenberg books. Next manual acceptance: import a live result. Hosted search
+  stays disabled pending per-user keys.
 - **Source delivery:** single-reader cleanup based on main `151f36a`, prepared on
   `refactor/simple-reader-only`. The user authorized push and merge to main; Git and
   pull-request history identify the delivered revision. Deployment is separate.
