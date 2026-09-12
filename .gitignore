@@ -18,3 +18,13 @@ apps/mobile/.expo/
 
 # Local reference copy of the inherited starter kit
 starter-kit/
+
+# Local audio artifacts and development tooling
+.pnpm-store/
+.env.*
+!.env.example
+output/
+*.epub
+*.mp3
+*.wav
+*.pcm
