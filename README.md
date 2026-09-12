@@ -163,13 +163,22 @@ See [audio verification](docs/audio/VERIFICATION.md) for observed checks and
 remaining platform limits. Native Expo/Android verification is not claimed.
 
 The inherited starter reference can be inspected locally at `starter-kit/`.
-The source intent and HTML prototype are tracked under `project_documents/`.
-`src/web/prototype/` adapts their sample content, importer, and presentation;
-`src/audio/` and `src/server/` contain the original audio implementation.
+The source planning notes, UI prototype, and planning photos are checked in
+under `project_documents/`; the product summary above is the concise team
+reference derived from those materials.
 
-The [audio preflight](docs/audio/PREFLIGHT.md) records the initial evidence.
-Broader EPUB compatibility, automatic story-start detection, native playback,
-and background listening remain separate validation work.
+### Environment variables
+
+Copy `.env.example` to `.env.local` (or `.env` when required by the chosen
+scaffold) and set `OPENAI_API_KEY` for local development. Real environment
+files are ignored by Git. Do not rename this to an `EXPO_PUBLIC_*` variable or
+bundle a team key into the Expo client; the eventual product flow is
+bring-your-own-key through the app's settings.
+
+Before choosing a scaffold, validate EPUB reading order/story-start behavior,
+Expo Web and Expo Go support for import, parsing, audio, and persistence, the
+safe API-key storage/removal boundary on web and Android, current OpenAI TTS
+limits, and behavior when the key, network, or generation pipeline fails.
 
 ## Team repository
 
@@ -184,8 +193,10 @@ server-side and never commit local credentials.
 - Make the local-versus-server storage boundary explicit.
 - Add accounts, cloud libraries, OCR, search, or additional surfaces only when
   the team explicitly chooses them for the demonstrated interaction.
-- Do not commit `.env` files, credentials, EPUBs, generated audio, personal
+- Do not commit real `.env` files, credentials, EPUBs, generated audio, personal
   data, or large build output.
+- `.env.example` is the tracked placeholder template; it must never contain a
+  real key.
 
 ## Team workflow
 

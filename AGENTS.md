@@ -46,6 +46,9 @@ they are reference material rather than current project source.
   behind small typed modules that can be shared across web and mobile.
 - Keep provider credentials server-side. Never place API keys or tokens in Expo
   public environment variables, source files, logs, or commits.
+- `.env.example` may contain only empty or clearly fake placeholders for
+  `OPENAI_API_KEY`. Real `.env` and `.env.local` files are ignored and must
+  never be committed.
 - Validate imported file type and size, avoid logging book contents, and make
   the local-versus-server storage boundary explicit.
 - Do not assume EPUB reading order, story-start detection, background audio,
@@ -90,7 +93,8 @@ static checks.
 - Use a short-lived branch per feature and open a focused pull request.
 - Keep commits small enough to cherry-pick during the hackathon.
 - Keep `starter-kit/` local-only and ignored.
-- Do not commit `.env`, EPUB files, generated audio, personal data, or large
+- Do not commit real `.env` files, EPUB files, generated audio, personal data,
+  or large
   build output.
 - Before merging, include the exact verification commands run and note any
   missing account/device-dependent checks.
