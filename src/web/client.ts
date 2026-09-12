@@ -1,5 +1,6 @@
 import './prototype/books.js';
 import './prototype/epub.js';
+import { mountKeySettings } from '../audio/key-settings.ts';
 import { AudioController } from '../audio/controller.ts';
 import { BrowserAssets, BrowserMedia, readPosition, writePosition } from '../audio/browser.ts';
 import { MODEL, splitPassage, type NarrationProfile, type Passage } from '../audio/types.ts';
@@ -23,7 +24,7 @@ const controller = new AudioController(new BrowserMedia(), assets, position => {
 function renderStatus(): void {
   const state = controller.snapshot();
   banner.textContent = state.error || state.notice || warning || connectionError ||
-    (!config.configured ? 'Add OPENROUTER_API_KEY to the server .env file, restart with pnpm dev, and reload. You can still read your books.' :
+    (!config.configured ? 'Add your OpenRouter API key in settings to listen. You can still read your books.' :
       state.status === 'preparing' ? 'Preparing your next passage… You can pause or choose another passage.' :
       config.profile.model === 'test/fixture' ? 'Test audio fixture · not Fish Audio narration.' : 'Fish Audio narration · your place is saved automatically.');
   banner.classList.toggle('error', Boolean(state.error || connectionError || !config.configured));
@@ -55,3 +56,4 @@ const bridge = {
 declare global { interface Window { bookwormAudio: typeof bridge } }
 window.bookwormAudio = bridge;
 await import('./prototype/ui.js');
+mountKeySettings(() => controller.pause(), configured => { config.configured = configured; connectionError = ''; renderStatus(); });

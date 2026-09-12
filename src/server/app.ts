@@ -2,10 +2,12 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { SpeechError, validateText, type SpeechProvider } from './speech.ts';
+import { validateApiKey } from './credentials.ts';
 
 /** Local single-user runtime. Authentication must be added before public hosting. */
-export function createAudioServer(provider: SpeechProvider, publicDir: string) {
+export function createAudioServer(provider: SpeechProvider, publicDir: string, updateKey?: (key: string) => Promise<void>) {
   let active = 0;
+  let updatingKey = false;
   const staticFiles: Record<string, [string, string]> = {
     '/': ['index.html', 'text/html; charset=utf-8'],
     '/simple': ['simple.html', 'text/html; charset=utf-8'],
@@ -26,6 +28,24 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string) {
     if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) return json(res, 403, { error: { code: 'ORIGIN_DENIED', message: 'Cross-origin requests are not allowed.' } });
     if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { error: { code: 'ORIGIN_DENIED', message: 'Cross-site requests are not allowed.' } });
     const path = new URL(req.url ?? '/', 'http://localhost').pathname;
+    if (path === '/api/audio/key' && ['PUT', 'DELETE'].includes(req.method ?? '')) {
+      let locked = false;
+      try {
+        if (req.headers['x-bookworm-client'] !== 'audio-v1' || !req.headers['content-type']?.startsWith('application/json')) throw new SpeechError('INVALID_REQUEST', 'Use the BookWorm settings form.', 400);
+        if (!updateKey) throw new SpeechError('SETTINGS_UNAVAILABLE', 'Key setup is unavailable on this server.', 503);
+        if (updatingKey || active) throw new SpeechError('BUSY', 'Pause playback in all BookWorm tabs, then try again.', 409);
+        updatingKey = true; locked = true;
+        const body = await readJson(req) as { apiKey?: unknown };
+        if (!body || typeof body !== 'object' || Array.isArray(body)) throw new SpeechError('INVALID_REQUEST', 'Expected a settings object.', 400);
+        const key = req.method === 'DELETE' ? '' : validateApiKey(body.apiKey);
+        await updateKey(key);
+        json(res, 200, { configured: provider.configured });
+      } catch (error) {
+        const safe = error instanceof SpeechError ? error : new SpeechError('KEY_SAVE_FAILED', 'The local server could not update the key.', 500);
+        json(res, safe.status, { error: { code: safe.code, message: safe.message } });
+      } finally { if (locked) updatingKey = false; }
+      return;
+    }
     if (req.method === 'GET' && path === '/api/audio/config') return json(res, 200, { configured: provider.configured, profile: provider.profile, maxPassageBytes: 2400 });
     if (req.method === 'GET' && path === '/api/config') return json(res, 200, { available: false }); // Prepared companion only.
     if (req.method === 'POST' && path === '/api/audio/speech') {
@@ -35,7 +55,7 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string) {
       res.on('close', disconnected);
       try {
         if (!req.headers['content-type']?.startsWith('application/json') || req.headers['x-bookworm-client'] !== 'audio-v1') throw new SpeechError('INVALID_REQUEST', 'Use the BookWorm audio client.', 400);
-        if (active >= 2) throw new SpeechError('BUSY', 'Two passages are already being prepared. Please wait and retry.', 429);
+        if (updatingKey || active >= 2) throw new SpeechError('BUSY', 'Audio is busy. Please wait and retry.', 429);
         active++; counted = true;
         const body = await readJson(req) as { text?: unknown; profileId?: unknown };
         if (!body || typeof body !== 'object' || Array.isArray(body)) throw new SpeechError('INVALID_REQUEST', 'Expected a speech request object.', 400);

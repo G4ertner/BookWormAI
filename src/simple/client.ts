@@ -1,4 +1,5 @@
 import '../web/prototype/epub.js';
+import { mountKeySettings } from '../audio/key-settings.ts';
 import { mountSimpleReader } from './ui.js';
 import { AudioController } from '../audio/controller.ts';
 import { BrowserAssets, BrowserMedia, readPosition, writePosition } from '../audio/browser.ts';
@@ -11,7 +12,7 @@ try {
   if (!response.ok) throw new Error();
   const config = await response.json();
   profile = config.profile;
-  if (!config.configured) connection = 'Add OPENROUTER_API_KEY to the server .env file, restart, and reload. Reading is still available.';
+  if (!config.configured) connection = 'Add your OpenRouter API key in narrator settings to listen. Reading is still available.';
 } catch { connection = 'The audio server is unavailable. Start it with pnpm dev and reload.'; }
 let warning = '';
 const banner = document.querySelector<HTMLElement>('#audio-status')!;
@@ -36,3 +37,4 @@ mountSimpleReader({
   snapshot: () => controller.snapshot(),
   subscribe: controller.subscribe.bind(controller),
 });
+mountKeySettings(() => controller.pause(), configured => { connection = configured ? '' : 'Add your OpenRouter API key in narrator settings to listen.'; renderStatus(); });

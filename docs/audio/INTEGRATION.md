@@ -7,13 +7,13 @@ Implemented on `feature/eric-audio`, 2026-09-12. The current browser shell comes
 ```sh
 pnpm install --frozen-lockfile
 cp .env.example .env  # Only if you do not already have .env.
-# Set OPENROUTER_API_KEY in .env using your editor.
+# Add your OpenRouter key in either UI settings popup after starting.
 pnpm dev
 ```
 
 Open `http://127.0.0.1:4310`. Node 22.14+ and pnpm 11 are required. `pnpm-workspace.yaml` pins the 24-hour package-age guard and permits only the pinned esbuild build script. There is no application-framework dependency.
 
-The server reads root `.env` at startup. After adding, removing, or changing a key, restart and reload the browser. `FISH_AUDIO_VOICE_ID` is optional; blank currently uses the provider default. Set a stable, tested Fish voice ID when choosing the production narrator. This MVP does not claim identity consistency for an unspecified provider-default voice.
+The server reads root `.env` at startup as an initial fallback. Keys saved in either settings popup persist in ignored `.data/audio-settings.json` with owner-only file permissions on macOS/Linux. Save and Remove take effect immediately for both versions. A saved value, including the empty value after removal, overrides `.env` across restarts. Removal disables future generation but does not delete an independently configured key from `.env`. Cached audio can still play. The file is local plaintext, not an encrypted keychain. `FISH_AUDIO_VOICE_ID` is optional; blank currently uses the provider default. Set a stable, tested Fish voice ID when choosing the production narrator. This MVP does not claim identity consistency for an unspecified provider-default voice.
 
 ## Replace the UI
 
@@ -44,6 +44,8 @@ The backend always selects `fish-audio/s2.1-pro-free:free`, explicitly requests 
 
 The free endpoint is rate limited and has no production latency or availability guarantee. This selection was verified in the [OpenRouter model listing](https://openrouter.ai/fish-audio/s2.1-pro-free:free) on 2026-09-12. No automatic fallback to a paid model is configured.
 
+`PUT /api/audio/key` accepts `{ "apiKey": "..." }`; `DELETE /api/audio/key` accepts `{}`. Both require the same JSON and `X-Bookworm-Client` headers as speech and return only `{ "configured": true/false }`. Updates are blocked while generation or another key update is active; pause other tabs and retry. Save checks input shape, not account validity; Play verifies real narration.
+
 ## Storage and privacy
 
 - Imported books, prepared notes, and the prototype's library position stay in local browser storage. The original EPUB is not uploaded to this server.
@@ -51,7 +53,7 @@ The free endpoint is rate limited and has no production latency or availability 
 - Audio blobs and their actual SHA-256 rendition IDs are cached in IndexedDB. Four recent assets stay in memory; the persistent cache targets 64 MB and evicts older unpinned assets. No book content or audio is stored on the server.
 - Resume positions use a separate browser namespace and contain IDs and milliseconds, not passage text. They are saved every two seconds during playback, on pause/seek, and on lifecycle notifications. Storage failures are visible.
 - Reuse the offset only when the exact cached rendition matches. Missing/changed audio restarts the current passage with a visible notice. Browser eviction and clearing site data may remove offline assets or progress.
-- The root `.env` is ignored. Keys are neither in bundles nor accepted by browser forms. The server binds only to loopback, checks Host/Origin and request headers, and serves an explicit public-file allowlist. This is a local, single-user demo, not a public multi-user service. Remote/native-device access requires a reviewed authentication and networking boundary.
+- The root `.env` is ignored. Keys entered into the password field are sent only to the same-origin server, cleared from the form, never returned by the API, and never written to browser storage. The server binds only to loopback, checks Host/Origin and request headers, and serves an explicit public-file allowlist. This is a local, single-user demo, not a public multi-user service. Remote/native-device access requires a reviewed authentication and networking boundary.
 
 ## Present limitations
 

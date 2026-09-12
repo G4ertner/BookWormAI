@@ -17,8 +17,7 @@ cp .env.example .env
 ```
 
 In an existing checkout, fetch and switch to this branch without discarding local
-changes. Do not overwrite an existing `.env`. Set your own `OPENROUTER_API_KEY`
-in `.env`, then run:
+changes. Do not overwrite an existing `.env`. Run the app, then enter your own OpenRouter key in either version’s settings popup:
 
 ```sh
 pnpm dev
@@ -44,7 +43,7 @@ Opening a `file://` prototype does not use this audio service.
 
 - Model: `fish-audio/s2.1-pro-free:free`, selected in `src/audio/types.ts`.
 - Provider: OpenRouter, `POST https://openrouter.ai/api/v1/audio/speech`.
-- `OPENROUTER_API_KEY`: server only; each teammate supplies their own key.
+- API key: use Save/Remove in the settings popup. Keys persist server-side in ignored `.data/audio-settings.json` (owner-only file permissions on macOS/Linux, plaintext rather than OS keychain). The saved value overrides `OPENROUTER_API_KEY` in `.env`; an empty saved value keeps narration disabled after restart. Both versions share this local setting. Cached audio remains playable after removal.
 - `FISH_AUDIO_VOICE_ID`: optional; blank uses the provider default. No fixed voice
   has been auditioned, and the UI's narrator-direction preference is preview only.
 - `HOST=127.0.0.1`, `PORT=4310`: loopback demo. Remote-device/public access is not
@@ -63,7 +62,7 @@ Opening a `file://` prototype does not use this audio service.
 | Audio/UI integration | `src/simple/client.ts` | Consume shared controller; keep credentials out of UI |
 | Queue, cancel, resume | `src/audio/controller.ts`, `types.ts` | No DOM/provider dependencies in controller |
 | Browser playback/cache | `src/audio/browser.ts` | Exact-rendition offset recovery; visible storage errors |
-| Provider and server | `src/server/` | Fixed model/profile validation, same-origin checks, private-file allowlist |
+| Provider and server | `src/server/`, `src/audio/key-settings.ts` | Fixed model/profile validation, same-origin checks, private-file allowlist |
 | EPUB importer | `src/web/prototype/epub.js` | Shared by both surfaces; test both after changing it |
 
 The repository does not select individual teammate assignments. Pick a lane and
@@ -94,7 +93,7 @@ with a notice. Neither surface offers cross-device storage or backup.
 
 Already observed: live Fish Free synthesis, progressive simplified-reader
 playback, pause/reload/resume, speed change, EPUB spine order and completion,
-and chapter selection. Automated coverage: 18 unit/HTTP tests, typecheck and
+and chapter selection. Automated coverage: 21 unit/HTTP tests, typecheck and
 build. See [VERIFICATION.md](VERIFICATION.md) and
 [SIMPLE_READER.md](SIMPLE_READER.md) for the scope of each observation.
 
@@ -132,13 +131,13 @@ and cloud storage are not implemented by this contribution.
 
 | Symptom | Next action |
 | --- | --- |
-| Key missing/rejected | Edit server `.env`; restart and reload. Never paste the key into a UI or issue. |
+| Key missing/rejected | Save a replacement in narrator settings, then press Play. Never paste the key into an issue or commit. |
 | Narrator settings changed | Reload; the request's profile must match the restarted server. |
 | Rate limited / two passages preparing | Pause other tabs, wait, then press Play to retry. Do not silently switch to paid narration. |
 | Saved audio unavailable | Continue from the current passage start; verify browser storage permissions. |
 | Changes do not appear | Rebuild/restart; `pnpm dev` does not watch files. |
 | Port in use | Stop the previous server, or set `PORT` in `.env`; use that origin consistently. |
 
-Keep feature commits focused. Never commit `.env`, keys, personal EPUBs, generated
+Keep feature commits focused. Never commit `.env`, `.data/`, keys, personal EPUBs, generated
 audio, `output/`, `dist/`, dependencies, or `starter-kit/`. This handoff is a branch
 delivery only; no PR, merge or deployment is part of it.

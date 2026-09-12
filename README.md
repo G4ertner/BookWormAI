@@ -17,7 +17,7 @@ includes fresh-checkout setup, editing boundaries, acceptance checks and next ta
 BookWormAI is a quieter way to go deeper: listen to a book, interrupt to ask
 about the current passage, and return later exactly where you left off. The
 product is intentionally a simple bring-your-own-key experience. Users supply
-their own OpenRouter API key in the local server's `.env`; accounts,
+their own OpenRouter API key in either version's settings popup; accounts,
 profiles, and service-operated AI billing are outside the initial scope.
 
 The visual prototype in the local planning materials establishes the product
@@ -111,7 +111,8 @@ pnpm install --frozen-lockfile
 cp .env.example .env # Skip this line if you already have .env.
 ```
 
-Edit `.env` to set `OPENROUTER_API_KEY` from your own OpenRouter account. An
+Enter your OpenRouter API key in the settings popup after starting the app.
+Alternatively, set `OPENROUTER_API_KEY` in `.env` before the first run. An
 optional `FISH_AUDIO_VOICE_ID` fixes the narrator to a particular Fish voice;
 blank uses the provider default. Keys stay on the server. Then:
 
@@ -125,7 +126,11 @@ pause/resume, chapter selection, playback speed, browser audio caching, and
 automatic position recovery. The companion still uses clearly labeled
 prepared demo answers; microphone and companion speech are outside this MVP.
 
-Restart after changing `.env`. For a previously built app use `pnpm start`.
+Keys entered in settings are saved to ignored `.data/audio-settings.json` on
+the local server and take effect immediately for both versions. Save/Remove
+overrides the `.env` key, including after a restart. The file uses owner-only
+permissions on macOS/Linux; it is not an encrypted OS keychain.
+Restart after changing voice/port settings in `.env`. For a previously built app use `pnpm start`.
 This is a loopback-only single-user runtime; authentication and device
 networking are required before making it reachable remotely.
 

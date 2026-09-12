@@ -20,15 +20,15 @@ export function validateText(value: unknown): string {
 
 export class OpenRouterSpeech implements SpeechProvider {
   readonly profile: NarrationProfile;
-  readonly configured: boolean;
+  get configured(): boolean { return Boolean(this.key.trim()); }
+  setKey(key: string): void { this.key = key; }
   constructor(private key: string, voice?: string, private request: typeof fetch = fetch) {
     const voiceId = voice?.trim() || null;
     this.profile = { id: createHash('sha256').update(JSON.stringify([MODEL, voiceId, 'mp3', 'v1'])).digest('hex'), model: MODEL, voice: voiceId };
-    this.configured = Boolean(key.trim());
   }
   async synthesize(text: string, signal: AbortSignal): Promise<SpeechResult> {
     validateText(text);
-    if (!this.configured) throw new SpeechError('KEY_MISSING', 'Add OPENROUTER_API_KEY to the server .env file, restart the server, and reload this page.', 503);
+    if (!this.configured) throw new SpeechError('KEY_MISSING', 'Add your OpenRouter API key in narrator settings to start narration.', 503);
     const body = { model: MODEL, input: text, response_format: 'mp3', ...(this.profile.voice ? { voice: this.profile.voice } : {}) };
     try {
       const response = await this.request('https://openrouter.ai/api/v1/audio/speech', {
@@ -40,7 +40,7 @@ export class OpenRouterSpeech implements SpeechProvider {
         await response.body?.cancel();
         const errors: Record<number, [string, string, number]> = {
           400: ['VOICE_CONFIGURATION', 'The provider rejected the speech settings. Check FISH_AUDIO_VOICE_ID on the server, then retry.', 422],
-          401: ['KEY_REJECTED', 'OpenRouter rejected the server API key. Update .env and restart the server.', 401],
+          401: ['KEY_REJECTED', 'OpenRouter rejected the API key. Update it in narrator settings.', 401],
           402: ['CREDIT_REQUIRED', 'Your OpenRouter account needs credit before narration can continue.', 402],
           403: ['ACCESS_DENIED', 'This OpenRouter key cannot access the selected voice model.', 403],
           404: ['MODEL_UNAVAILABLE', 'The selected Fish Audio model is unavailable. Your reading position is saved.', 503],

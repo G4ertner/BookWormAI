@@ -54,3 +54,19 @@ the workstation's existing pnpm store. Typecheck, all 18 tests and build passed
 from that directory. This proves the checked-in application is self-contained;
 it does not claim a fresh network download or another operating system was tested.
 A scan of all staged files found no occurrence of the configured OpenRouter key.
+
+## Settings API-key entry — 2026-09-12
+
+- Both versions now use the same settings form and local server endpoint. Key
+  files have owner-only permissions on macOS/Linux and are excluded by `.data/`.
+- Typecheck, build and 21 tests passed. Added coverage for saved-key reload,
+  removal overriding environment fallback, restrictive file permissions, invalid
+  input, active-provider replacement, cross-origin/header rejection, and absence
+  of secrets in API responses.
+- Browser checks used a dummy key on an isolated port 4311 server with a temporary
+  settings directory. Save in `/simple/` cleared the input and showed success;
+  `/` recognized the configured key, and Remove showed generation disabled.
+  No warning/error logs appeared. The working server's actual key was not changed.
+- Saving validates local input and persistence, not the OpenRouter account. Real
+  key validity is checked when the user presses Play. Earlier live Fish narration
+  evidence remains separate from these dummy-key setup checks.
