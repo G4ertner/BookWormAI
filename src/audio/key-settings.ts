@@ -11,7 +11,7 @@ export function mountKeySettings(pause: () => void, changed: (configured: boolea
     <select id="narration-model" style="${fieldStyle}"><option value="openrouter">Fish S2.1 Pro Free · OpenRouter</option><option value="openai">GPT-4o Mini TTS · OpenAI (paid)</option></select>
     <label for="narration-voice" style="display:block;margin-top:12px">Narration voice</label>
     <select id="narration-voice" style="${fieldStyle}"></select>
-    <p style="font-size:12px;margin:8px 0">Fish uses your OpenRouter key. OpenAI voices use your OpenAI key. Narration passages go to the selected provider through this server. Both versions share this choice.</p>
+    <p style="font-size:12px;margin:8px 0">Fish uses your OpenRouter key. OpenAI voices use your OpenAI key. Narration passages go to the selected provider through this server. </p>
     <button type="submit" style="padding:10px 16px;background:#294d3d;color:white;border-radius:6px">Apply model and voice</button>
   </form>
   ${(['openrouter', 'openai'] as const).map(id => {
@@ -23,7 +23,7 @@ export function mountKeySettings(pause: () => void, changed: (configured: boolea
       <p data-key-state="${id}" style="font-size:12px;margin-top:8px">Checking setup…</p>
     </form>`;
   }).join('')}
-  <p style="font-size:12px;margin:12px 0">Keys stay on this computer’s local server, survive restarts, and are never saved in browser storage. Each key is sent only to its own provider.</p>
+  <p id="key-storage-note" style="font-size:12px;margin:12px 0">Keys stay on this service’s server and are sent only to their provider.</p>
   <p id="api-key-status" role="status" aria-live="polite" style="font-size:13px;margin-top:10px"></p>`;
   const heading = dialog.querySelector('h2')!;
   (heading.closest('header') ?? heading).after(section);
@@ -43,10 +43,13 @@ export function mountKeySettings(pause: () => void, changed: (configured: boolea
   async function refresh(): Promise<void> {
     const attempt = ++epoch;
     const response = await fetch('/api/audio/config', { signal: AbortSignal.timeout(5000) });
-    if (!response.ok) throw new Error('Cannot reach the local audio server.');
+    if (!response.ok) throw new Error('Cannot reach the audio service.');
     const config = await response.json() as AudioSettings & { configured: boolean };
     if (attempt !== epoch) return;
-    if (!config.selection || !config.keys) throw new Error('Restart the audio server to enable model selection.');
+    if (!config.selection || !config.keys) throw new Error('Audio settings are unavailable. Reload to retry.');
+    section.querySelector<HTMLElement>('#key-storage-note')!.textContent = config.keyStorage === 'session'
+      ? 'Keys belong to this browser session and expire after 24 hours without a settings update. Other browsers need their own setup. Use Remove on shared devices.'
+      : 'Keys stay on this computer’s local server and survive restarts. They are never saved in browser storage. Each key is sent only to its provider.';
     model.value = config.selection.provider; voices(config.selection.voice || 'marin');
     for (const id of ['openrouter', 'openai'] as const) section.querySelector<HTMLElement>(`[data-key-state="${id}"]`)!.textContent = config.keys[id] ? 'Key saved. Provider acceptance has not been checked here. Press Play to test narration.' : 'No key saved for this provider.';
     changed(config.configured);
@@ -74,7 +77,7 @@ export function mountKeySettings(pause: () => void, changed: (configured: boolea
     form.querySelector('button[type="button"]')!.addEventListener('click', () => { input.value = ''; void update('/api/audio/key', 'DELETE', { provider }, 'Key removed for this provider. Cached audio can still play.'); });
   }
   dialog.addEventListener('close', () => section.querySelectorAll<HTMLInputElement>('input').forEach(input => { input.value = ''; }));
-  const refreshSafely = () => { if (!busy) void refresh().catch(() => { status.textContent = 'Cannot load settings. Restart the server and reload.'; }); };
+  const refreshSafely = () => { if (!busy) void refresh().catch(() => { status.textContent = 'Cannot load settings. Reload to retry.'; }); };
   new MutationObserver(() => { if (dialog.open) refreshSafely(); }).observe(dialog, { attributes: true, attributeFilter: ['open'] });
   refreshSafely();
 }

@@ -28,3 +28,7 @@ output/
 *.mp3
 *.wav
 *.pcm
+
+# Cloudflare local runtime state and secrets
+.wrangler/
+.dev.vars*

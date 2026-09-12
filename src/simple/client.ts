@@ -1,4 +1,4 @@
-import '../web/prototype/epub.js';
+import '../books/epub.js';
 import { mountKeySettings } from '../audio/key-settings.ts';
 import { mountSimpleReader } from './ui.js';
 import { AudioController } from '../audio/controller.ts';
@@ -13,7 +13,7 @@ try {
   const config = await response.json();
   profile = config.profile;
   if (!config.configured) connection = 'Add the selected provider’s API key in narrator settings to listen. Reading is still available.';
-} catch { connection = 'The audio server is unavailable. Start it with pnpm dev and reload.'; }
+} catch { connection = 'The audio service is unavailable. Reload to retry.'; }
 let warning = '';
 const banner = document.querySelector<HTMLElement>('#audio-status')!;
 const assets = new BrowserAssets(profile, message => { warning = message; renderStatus(); });

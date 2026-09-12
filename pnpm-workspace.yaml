@@ -1,4 +1,10 @@
 minimumReleaseAge: 1440
 storeDir: .pnpm-store
 allowBuilds:
+  esbuild: set this to true or false
   esbuild@0.25.12: true
+  esbuild@0.28.1: true
+  sharp@0.34.5: true
+  workerd@1.20260708.1: true
+  sharp: set this to true or false
+  workerd: set this to true or false
