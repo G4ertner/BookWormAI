@@ -17,8 +17,9 @@
   Live: UI/settings, exact HTML/JS build match, disposable-session save/isolation/
   remove, audio independence and missing-key API verified; no console errors.
 - **Next:** user saves their Exa key on the hosted origin, then submits Find books.
-  Hosted real Exa provider acceptance and full import remain unverified. Source is
-  on the isolated fix branch; do not include unrelated reading-companion work.
+  Hosted real Exa provider acceptance and full import remain unverified. The user
+  authorized merging the fix to main; Git/PR history records delivery. Keep unrelated
+  reading-companion work separate.
 - **Commands:** `pnpm dev`; `pnpm check` (HTTP tests need loopback socket access).
   See `docs/BOOK_RECOMMENDATIONS.md` and `docs/DEPLOYMENT.md`.
 - **Do not:** commit secrets/books/audio/output, expose a shared operator key,
