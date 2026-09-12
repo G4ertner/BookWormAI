@@ -4,6 +4,11 @@ One reader for your own books: add a DRM-free EPUB or TXT file, discover books o
 Project Gutenberg, listen with OpenRouter or OpenAI, and resume where you stopped.
 The simplified reader is the only application. Local and Cloudflare builds share its source.
 
+![BookWormAI homepage with Read together and a personal bookshelf](docs/images/homepage.png)
+
+**Read together** brings an AI companion to your current passage. Expand **Show more**
+for discussion ideas, or open the companion directly from the homepage or reader.
+
 ## Choose how to get started
 
 | What you want to do | Where to start |
@@ -132,7 +137,7 @@ Existing `/simple/` links open the same reader.
 
 ### 6. Connect narration
 
-1. From **My library**, open **Narrator settings**.
+1. From **My library**, open **Reader settings**.
 2. Choose the narration model: Fish uses **OpenRouter**; OpenAI voices use **OpenAI**.
 3. Paste the matching provider’s API key into its field and click **Save**.
 4. Choose a voice if available, then click **Apply model and voice**.
@@ -174,7 +179,7 @@ keep the original EPUB/TXT files.
 | A lockfile or dependency-build approval error | Confirm you downloaded one complete main revision and are using pnpm 11.0.9. Ask a maintainer to check the lockfile/build allowances; do not delete the lockfile or approve every script. |
 | The browser says it cannot connect | Confirm `pnpm dev` is still running and use the exact address printed in the terminal. |
 | Port 4310 is already in use | Stop the earlier BookWormAI terminal with Ctrl + C before starting another copy. |
-| Key rejected, quota exceeded or credits required | Check the selected provider and key in Narrator settings, then check that provider’s account dashboard. |
+| Key rejected, quota exceeded or credits required | Check the selected provider and key in Reader settings, then check that provider’s account dashboard. |
 | Browser storage is full | New changes may last only for this session. Keep your original book files; do not clear site data unless you intend to remove the saved library. |
 
 **If installing pnpm globally fails with a permissions error**, you can run the
@@ -211,6 +216,27 @@ Installation references above were checked on September 12, 2026.
 Books and listening position stay in the same browser/origin. Localhost and the
 hosted demo have separate libraries. EPUB front matter may be the first section;
 use Chapters to select the story. Unsupported or encrypted EPUBs require a text export.
+
+## Read together
+
+Open a book and select **Read together**. Ask about the current passage, look back
+at earlier passages, or discuss an interpretation. The companion uses
+**Gemini 2.5 Flash through OpenRouter**, independently of your narration model.
+Save an OpenRouter key in **Reader settings** to enable it.
+
+**Through this passage** limits book retrieval to your current position. Choose
+**The whole book** explicitly to discuss later sections. Model knowledge and web
+sources may still contain spoilers. Book citations open a source preview without
+moving your listening position; **Continue listening** returns to narration.
+
+For outside facts or background, save your own **Exa API key** in Reader settings
+and enable **Allow outside research** in the discussion. Locally, the existing
+server-only `EXA_API_KEY` is used unless you save or remove a companion Exa key.
+Hosted readers use their own expiring session keys; no shared Exa key is supplied.
+Questions, relevant excerpts and recent discussion go to OpenRouter. Exa receives
+a model-generated topic query when outside research is enabled. Your complete
+library is not uploaded. The latest eight discussion turns are stored separately
+in this browser. See [setup, limits and verification](docs/READING_COMPANION.md).
 
 ## Checks for contributors
 

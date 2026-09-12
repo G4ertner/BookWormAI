@@ -93,6 +93,44 @@ test('public book recommendations retain session/origin/rate guards and never us
  try {assert.equal((await req('/api/books/recommendations','POST',{query:'adventure'})).status,429);} finally {env.API_LIMIT.limit=limit;}
 });
 
+test('companion uses Gemini with session-isolated OpenRouter and Exa keys, preserving speech selection', async()=>{
+ const user='companion-reader';
+ assert.equal((await req('/api/companion/config','GET',undefined,'')).status,401);
+ assert.equal((await req('/api/companion/exa-key','PUT',{apiKey:key},user,{Origin:'https://evil.test'})).status,403);
+ await req('/api/audio/key','PUT',{provider:'openrouter',apiKey:key},user);
+ await req('/api/audio/selection','PUT',{provider:'openai',voice:'cedar'},user);
+ await req('/api/companion/exa-key','PUT',{apiKey:key+'-exa'},user);
+ const config=await (await req('/api/companion/config','GET',undefined,user)).json();
+ assert.deepEqual(config,{model:'google/gemini-2.5-flash',configured:true,webConfigured:true});assert.equal(JSON.stringify(config).includes(key),false);
+ assert.equal((await (await req('/api/companion/config','GET',undefined,'companion-other')).json()).webConfigured,false);
+ const source={id:'b:0:0:0',kind:'book',title:'Chapter 1',text:'The robin sang.',order:0};
+ const turn={context:{bookId:'test',title:'Story',author:'',sample:true,boundary:0,scope:'position',current:source,selection:''},question:'What happened?',history:[],steps:[],allowWeb:true};
+ const original=globalThis.fetch;
+ try {
+  globalThis.fetch=async function(url,init){
+   assert.equal(this,undefined);
+   if(url==='https://api.exa.ai/search'){
+    assert.equal(new Headers(init.headers).get('x-api-key'),key+'-exa');
+    return Response.json({results:[{url:'https://example.org/robin',title:'Robins',text:'Robins sing.'}]});
+   }
+   assert.equal(url,'https://openrouter.ai/api/v1/chat/completions');assert.equal(new Headers(init.headers).get('authorization'),'Bearer '+key);
+   assert.equal(JSON.parse(init.body).model,'google/gemini-2.5-flash');
+   return Response.json({choices:[{message:{tool_calls:[{function:{name:'answer',arguments:JSON.stringify({blocks:[{kind:'book',text:'A robin sang.',citations:[{id:source.id,quote:'robin sang'}]}],followUp:''})}}]}}]});
+  };
+  assert.equal((await req('/api/companion/turn','POST',turn,user)).status,200);
+  const result=await req('/api/companion/search','POST',{query:'robin song',allowWeb:true},user);assert.equal(result.status,200);assert.equal((await result.json()).sources.length,1);
+  assert.equal((await req('/api/companion/search','POST',{query:'robin song',allowWeb:true},'companion-other')).status,503);
+  assert.equal((await req('/api/companion/turn','POST',{...turn,question:'x'.repeat(66000)},user)).status,413);
+  assert.equal((await (await req('/api/audio/config','GET',undefined,user)).json()).selection.provider,'openai');
+ } finally { globalThis.fetch=original; }
+ await req('/api/companion/exa-key','DELETE',{},user);
+ assert.equal((await (await req('/api/companion/config','GET',undefined,user)).json()).webConfigured,false);
+ await req('/api/companion/exa-key','PUT',{apiKey:key+'-exa'},user);
+ database.exec('UPDATE companion_exa_settings SET expires_at=0');
+ assert.equal((await (await req('/api/companion/config','GET',undefined,user)).json()).webConfigured,false);
+ await worker.scheduled({},env);assert.equal(database.prepare('SELECT count(*) AS n FROM companion_exa_settings WHERE expires_at=0').get().n,0);
+});
+
 test('recommendation keys are private to each session, removable, and independent of narration',async()=>{
  const exaKey='dummy-exa-key-for-tests-only-12345';
  const saved=await req('/api/books/recommendations/key','PUT',{apiKey:exaKey},'reader-a');

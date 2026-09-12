@@ -6,13 +6,16 @@ import { ExaRecommendations } from './recommendations.ts';
 import { validateApiKey } from './credentials.ts';
 import { validateSelection } from './narration.ts';
 import type { AudioSelection, AudioSettings, ProviderId } from '../audio/catalog.ts';
+import { CompanionService } from './companion.ts';
+import { CompanionError } from '../companion/types.ts';
 
 /** Local single-user runtime. Authentication must be added before public hosting. */
-export function createAudioServer(provider: SpeechProvider, publicDir: string, updateKey?: (key: string, provider?: ProviderId) => Promise<void>, settings?: { read: () => AudioSettings; select: (selection: AudioSelection) => Promise<void> }, recommendations = new ExaRecommendations(), updateSearchKey?: (key: string) => Promise<void>) {
+export function createAudioServer(provider: SpeechProvider, publicDir: string, updateKey?: (key: string, provider?: ProviderId) => Promise<void>, settings?: { read: () => AudioSettings; select: (selection: AudioSelection) => Promise<void> }, recommendations = new ExaRecommendations(), updateSearchKey?: (key: string) => Promise<void>, companion = { service: new CompanionService(), updateExa: undefined as ((key: string) => Promise<void>) | undefined }) {
   let active = 0;
   let searching = false;
   let updatingSearchKey = false;
   let updatingKey = false;
+  let discussing = false;
   const staticFiles: Record<string, [string, string]> = {
     '/': ['simple.html', 'text/html; charset=utf-8'],
     '/simple': ['simple.html', 'text/html; charset=utf-8'],
@@ -31,6 +34,30 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string, u
     if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) return json(res, 403, { error: { code: 'ORIGIN_DENIED', message: 'Cross-origin requests are not allowed.' } });
     if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { error: { code: 'ORIGIN_DENIED', message: 'Cross-site requests are not allowed.' } });
     const path = new URL(req.url ?? '/', 'http://localhost').pathname;
+    if (path.startsWith('/api/companion/')) {
+      const controller = new AbortController();
+      const disconnected = () => { if (!res.writableEnded) controller.abort(); };
+      let counted = false; res.on('close', disconnected);
+      try {
+        if (path === '/api/companion/config' && req.method === 'GET') return json(res, 200, companion.service.config());
+        if (!req.headers['content-type']?.startsWith('application/json') || req.headers['x-bookworm-client'] !== 'audio-v1') throw new CompanionError('INVALID_REQUEST', 'Use the BookWorm companion controls.');
+        if (discussing) throw new CompanionError('BUSY', 'A companion request is already running. Wait or cancel it.', 429);
+        discussing = true; counted = true;
+        const body = await readJson(req, path === '/api/companion/turn' ? 65536 : 16000);
+        if (path === '/api/companion/turn' && req.method === 'POST') return json(res, 200, await companion.service.turn(body, controller.signal));
+        if (path === '/api/companion/search' && req.method === 'POST') return json(res, 200, await companion.service.search(body, controller.signal));
+        if (path === '/api/companion/exa-key' && ['PUT', 'DELETE'].includes(req.method ?? '')) {
+          if (!companion.updateExa) throw new CompanionError('SETTINGS_UNAVAILABLE', 'Search settings are unavailable.', 503);
+          const key = req.method === 'DELETE' ? '' : validateApiKey((body as { apiKey?: unknown })?.apiKey);
+          await companion.updateExa(key); return json(res, 200, { saved: true });
+        }
+        return json(res, 405, { error: { code: 'METHOD_NOT_ALLOWED', message: 'Unsupported companion operation.' } });
+      } catch (error) {
+        const safe = error instanceof CompanionError || error instanceof SpeechError ? error : new CompanionError('SERVICE_UNAVAILABLE', 'The companion could not complete this request.', 503);
+        if (!res.destroyed) json(res, safe.status, { error: { code: safe.code, message: safe.message } });
+      } finally { if (counted) discussing = false; res.removeListener('close', disconnected); }
+      return;
+    }
     if (req.method === 'GET' && path === '/api/books/recommendations/config') return json(res, 200, { configured: recommendations.configured });
     if (path === '/api/books/recommendations/key' && ['PUT', 'DELETE'].includes(req.method ?? '')) {
       let locked = false;
@@ -131,11 +158,11 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string, u
   return server;
 }
 function json(res: ServerResponse, status: number, value: unknown): void { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(value)); }
-async function readJson(req: IncomingMessage): Promise<unknown> {
+async function readJson(req: IncomingMessage, limit = 16000): Promise<unknown> {
   const chunks: Buffer[] = []; let size = 0;
   for await (const chunk of req) {
     size += Buffer.byteLength(chunk);
-    if (size > 16000) throw new SpeechError('BODY_TOO_LARGE', 'The request exceeds the passage limit.', 413);
+    if (size > limit) throw new SpeechError('BODY_TOO_LARGE', 'The request exceeds its size limit. Clear older discussion or use a shorter question.', 413);
     chunks.push(Buffer.from(chunk));
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }

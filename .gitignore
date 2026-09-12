@@ -32,3 +32,6 @@ output/
 # Cloudflare local runtime state and secrets
 .wrangler/
 .dev.vars*
+
+# Isolated browser verification artifacts
+.playwright-cli/

@@ -1,6 +1,6 @@
+import { loadApiKey, saveApiKey } from './credentials.ts';
 import { fileURLToPath } from 'node:url';
 import { createAudioServer } from './app.ts';
-import { loadApiKey, saveApiKey } from './credentials.ts';
 import { ExaRecommendations } from './recommendations.ts';
 import { NarrationService } from './narration.ts';
 import { resolve } from 'node:path';
@@ -12,7 +12,12 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('POR
 const provider = await NarrationService.open(resolve('.data'), { openrouter: process.env.OPENROUTER_API_KEY, openai: process.env.OPENAI_API_KEY, fishVoice: process.env.FISH_AUDIO_VOICE_ID });
 const searchKeyPath = resolve('.data/exa-settings.json');
 const recommendations = new ExaRecommendations(await loadApiKey(searchKeyPath, process.env.EXA_API_KEY || ''));
-const server = createAudioServer(provider, fileURLToPath(new URL('../public/', import.meta.url)), (key, target) => provider.updateKey(key, target), { read: () => provider.settings(), select: selection => provider.select(selection) }, recommendations, async key => { await saveApiKey(searchKeyPath, key); recommendations.setKey(key); });
+const exaPath = resolve('.data/companion-exa.json');
+let exaKey = await loadApiKey(exaPath, process.env.EXA_API_KEY || '');
+const server = createAudioServer(provider, fileURLToPath(new URL('../public/', import.meta.url)), (key, target) => provider.updateKey(key, target), { read: () => provider.settings(), select: selection => provider.select(selection) }, recommendations, async key => { await saveApiKey(searchKeyPath, key); recommendations.setKey(key); }, {
+  service: provider.companion(() => exaKey),
+  updateExa: async key => { await saveApiKey(exaPath, key); exaKey = key; },
+});
 server.listen(port, host, () => {
   console.log(`BookWormAI audio: http://${host}:${port}`);
   console.log(`Narration: ${provider.profile.model}; ${provider.configured ? 'key configured; press Play to test' : 'add the provider key in narrator settings'}`);

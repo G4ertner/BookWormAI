@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { OPENAI_VOICES, type AudioSelection, type AudioSettings, type ProviderId } from '../audio/catalog.ts';
 import { OpenAISpeech, OpenRouterSpeech, SpeechError, type SpeechProvider } from './speech.ts';
 import { loadApiKey, saveApiKey, saveSettingsFile } from './credentials.ts';
+import { CompanionService } from './companion.ts';
 
 export function validateSelection(value: unknown): AudioSelection {
   const selection = value as Partial<AudioSelection> | null;
@@ -33,6 +34,7 @@ export class NarrationService implements SpeechProvider {
   get configured() { return this.active.configured; }
   settings(): AudioSettings { return { selection: { ...this.selection }, keys: { openrouter: Boolean(this.keys.openrouter), openai: Boolean(this.keys.openai) } }; }
   synthesize(text: string, signal: AbortSignal) { return this.active.synthesize(text, signal); }
+  companion(exaKey: () => string): CompanionService { return new CompanionService(() => this.keys.openrouter, exaKey, this.request); }
   async updateKey(key: string, provider: ProviderId = 'openrouter'): Promise<void> {
     await saveApiKey(join(this.directory, provider === 'openai' ? 'openai-settings.json' : 'audio-settings.json'), key);
     this.keys[provider] = key; this.rebuild();

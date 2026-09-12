@@ -3,6 +3,8 @@ import client from '../../dist/public/simple.js?raw';
 import { OpenRouterSpeech, OpenAISpeech, SpeechError, validateText } from './speech.ts';
 import { ExaRecommendations } from './recommendations.ts';
 import { OPENAI_VOICES } from '../audio/catalog.ts';
+import { CompanionService } from './companion.ts';
+import { CompanionError } from '../companion/types.ts';
 
 interface Statement { bind(...values: unknown[]): Statement; first(): Promise<any>; run(): Promise<unknown> }
 interface Env { DB: { prepare(sql: string): Statement }; API_LIMIT: { limit(options: {key: string}): Promise<{success: boolean}> } }
@@ -12,7 +14,7 @@ const headers = {
 };
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers });
 const reject = (code: string, message: string, status = 400): never => { throw new SpeechError(code, message, status); };
-async function readBody(request: Request): Promise<any> {
+async function readBody(request: Request, limit = 16000): Promise<any> {
   if (request.headers.get('X-Bookworm-Client') !== 'audio-v1' || !request.headers.get('Content-Type')?.startsWith('application/json')) reject('INVALID_REQUEST', 'Use the BookWorm settings or audio controls.');
   const reader = request.body?.getReader();
   if (!reader) reject('INVALID_JSON', 'Expected a request body.');
@@ -21,7 +23,7 @@ async function readBody(request: Request): Promise<any> {
     while (true) {
       const {value, done} = await reader!.read(); if (done) break;
       size += value.length;
-      if (size > 16000) { await reader!.cancel(); reject('BODY_TOO_LARGE', 'The request exceeds the passage limit.', 413); }
+      if (size > limit) { await reader!.cancel(); reject('BODY_TOO_LARGE', 'The request exceeds its size limit. Clear older discussion or use a shorter question.', 413); }
       chunks.push(value);
     }
   } finally { reader!.releaseLock(); }
@@ -34,11 +36,13 @@ async function readBody(request: Request): Promise<any> {
 }
 // Only guards concurrent work in this isolate; provider quotas remain authoritative.
 const active = new Map<string, number>();
+const discussing = new Set<string>();
 const searching = new Set<string>();
 export default {
   async scheduled(_event: unknown, env: Env): Promise<void> {
     await env.DB.prepare('DELETE FROM recommendation_settings WHERE expires_at <= ?').bind(Math.floor(Date.now()/1000)).run();
     await env.DB.prepare('DELETE FROM public_audio_settings WHERE expires_at <= ?').bind(Math.floor(Date.now()/1000)).run();
+    await env.DB.prepare('DELETE FROM companion_exa_settings WHERE expires_at <= ?').bind(Math.floor(Date.now()/1000)).run();
   },
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
@@ -56,7 +60,7 @@ export default {
         return new Response(html, {headers:responseHeaders});
       }
       if (request.method === 'GET' && url.pathname === '/assets/simple.js') return new Response(client, { headers: { ...headers, 'Content-Type': 'text/javascript; charset=utf-8' } });
-      if (!['/api/books/recommendations/config','/api/books/recommendations/key','/api/books/recommendations','/api/audio/config','/api/audio/key','/api/audio/selection','/api/audio/speech'].includes(url.pathname)) return json({error:{code:'NOT_FOUND',message:'Not found.'}},404);
+      if (!['/api/companion/config','/api/companion/turn','/api/companion/search','/api/companion/exa-key','/api/books/recommendations/config','/api/books/recommendations/key','/api/books/recommendations','/api/audio/config','/api/audio/key','/api/audio/selection','/api/audio/speech'].includes(url.pathname)) return json({error:{code:'NOT_FOUND',message:'Not found.'}},404);
       if (!validToken) reject('SESSION_REQUIRED','Open the reader and allow cookies, then retry.',401);
       // Cookie is a random bearer secret. Only its hash is stored in D1.
       const user = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(validToken!))),v=>v.toString(16).padStart(2,'0')).join('');
@@ -89,6 +93,25 @@ export default {
       const now = Math.floor(Date.now()/1000);
       if (!env.DB) reject('SETTINGS_UNAVAILABLE', 'Audio settings are temporarily unavailable.', 503);
       const settings = await env.DB.prepare('SELECT * FROM public_audio_settings WHERE user_id = ? AND expires_at > ?').bind(user,now).first() ?? {provider:'openrouter',voice:'marin',openrouter_key:'',openai_key:''};
+      if (url.pathname.startsWith('/api/companion/')) {
+        const searchSettings = await env.DB.prepare('SELECT * FROM companion_exa_settings WHERE user_id = ? AND expires_at > ?').bind(user,now).first();
+        const companion = new CompanionService(() => settings.openrouter_key || '', () => searchSettings?.exa_key || '');
+        if (url.pathname.endsWith('/config') && request.method === 'GET') return json(companion.config());
+        if (discussing.has(user)) reject('BUSY', 'A companion request is already running. Wait or cancel it.', 429);
+        discussing.add(user);
+        try {
+          const body = await readBody(request, url.pathname.endsWith('/turn') ? 65536 : 16000);
+          if (url.pathname.endsWith('/turn') && request.method === 'POST') return json(await companion.turn(body, request.signal));
+          if (url.pathname.endsWith('/search') && request.method === 'POST') return json(await companion.search(body, request.signal));
+          if (url.pathname.endsWith('/exa-key') && ['PUT', 'DELETE'].includes(request.method)) {
+            const key = request.method === 'DELETE' ? '' : typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
+            if (request.method !== 'DELETE' && (key.length < 20 || key.length > 512 || /\s|[^\x21-\x7e]/.test(key))) reject('INVALID_KEY', 'Enter a valid Exa API key (20–512 characters, no spaces).');
+            await env.DB.prepare('INSERT INTO companion_exa_settings (user_id, exa_key, expires_at) VALUES (?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET exa_key=excluded.exa_key, expires_at=excluded.expires_at').bind(user,key,now+86400).run();
+            return json({ saved: true });
+          }
+          return json({error:{code:'METHOD_NOT_ALLOWED',message:'Unsupported companion operation.'}},405);
+        } finally { discussing.delete(user); }
+      }
       const provider = settings.provider === 'openai' ? new OpenAISpeech(settings.openai_key, settings.voice) : new OpenRouterSpeech(settings.openrouter_key);
       if (request.method === 'GET' && url.pathname === '/api/audio/config') return json({
         configured: provider.configured, profile: provider.profile, maxPassageBytes: 2400, keyStorage: 'session',
@@ -126,7 +149,7 @@ export default {
       }
       return json({error:{code:'METHOD_NOT_ALLOWED',message:'Unsupported method.'}},405);
     } catch (error) {
-      const safe = error instanceof SpeechError ? error : new SpeechError('SERVICE_UNAVAILABLE','The audio service is temporarily unavailable. Please retry.',503);
+      const safe = error instanceof SpeechError || error instanceof CompanionError ? error : new SpeechError('SERVICE_UNAVAILABLE','The reader service is temporarily unavailable. Please retry.',503);
       return json({error:{code:safe.code,message:safe.message}},safe.status);
     }
   },
