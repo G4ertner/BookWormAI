@@ -1,4 +1,5 @@
 import '../books/epub.js';
+import { mountCompanion } from '../companion/ui.ts';
 import { mountKeySettings } from '../audio/key-settings.ts';
 import { mountSimpleReader } from './ui.js';
 import { AudioController } from '../audio/controller.ts';
@@ -27,7 +28,7 @@ function renderStatus(): void {
     (state.status === 'preparing' ? 'Preparing your next passage…' : `${profile.model === 'gpt-4o-mini-tts' ? 'OpenAI' : 'Fish Free'} narration · your place is saved automatically.`);
 }
 controller.subscribe(renderStatus);
-mountSimpleReader({
+const reader = mountSimpleReader({
   split: (text: string) => splitPassage(text, 1000),
   load: (passages: Passage[], index = 0) => controller.load(passages, passages[0] ? readPosition(passages[0].bookId) : undefined, index),
   play: () => controller.play(),
@@ -38,3 +39,5 @@ mountSimpleReader({
   subscribe: controller.subscribe.bind(controller),
 });
 mountKeySettings(() => controller.pause(), configured => { connection = configured ? '' : 'Add the selected provider’s API key in narrator settings to listen.'; renderStatus(); });
+
+mountCompanion(reader);
