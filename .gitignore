@@ -2,6 +2,7 @@ node_modules/
 .env
 .env.local
 gihub token.txt
+github-token-read-write.txt
 *.log
 dist/
 .DS_Store
