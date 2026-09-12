@@ -1,9 +1,9 @@
 {
-  "name": "agents-everywhere-starter-kit",
+  "name": "bookwormai",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Starter kit for the Agents, Everywhere: Bots, Channels & More global hackathon.",
+  "description": "BookWormAI: an EPUB-to-audiobook reading experience for the Agents, Everywhere hackathon.",
   "license": "MIT",
   "engines": {
     "node": ">=22"
