@@ -92,3 +92,52 @@ test('public book recommendations retain session/origin/rate guards and never us
  const limit=env.API_LIMIT.limit;env.API_LIMIT.limit=async()=>({success:false});
  try {assert.equal((await req('/api/books/recommendations','POST',{query:'adventure'})).status,429);} finally {env.API_LIMIT.limit=limit;}
 });
+
+test('recommendation keys are private to each session, removable, and independent of narration',async()=>{
+ const exaKey='dummy-exa-key-for-tests-only-12345';
+ const saved=await req('/api/books/recommendations/key','PUT',{apiKey:exaKey},'reader-a');
+ assert.equal(saved.status,200);
+ assert.equal(saved.headers.get('Set-Cookie').split(';')[0],sessions.get('reader-a'));
+ assert.match(saved.headers.get('Set-Cookie'),/Max-Age=86400; HttpOnly; Secure; SameSite=Strict/);
+ assert.deepEqual(await (await req('/api/books/recommendations/config','GET',undefined,'reader-a')).json(),{configured:true});
+ assert.deepEqual(await (await req('/api/books/recommendations/config','GET',undefined,'reader-b')).json(),{configured:false});
+ assert.equal((await (await req('/api/audio/config','GET',undefined,'reader-a')).json()).configured,false);
+ const original=globalThis.fetch;let calls=0;
+ try {
+  globalThis.fetch=async function(url,init){assert.equal(this,undefined);calls++;assert.equal(url,'https://api.exa.ai/search');assert.equal(new Headers(init.headers).get('x-api-key'),exaKey);return Response.json({results:[{title:'Alice',url:'https://www.gutenberg.org/ebooks/11'}]});};
+  const found=await req('/api/books/recommendations','POST',{query:'gentle adventure'},'reader-a');assert.equal(found.status,200);assert.equal((await found.json()).books[0].gid,11);
+  assert.equal((await req('/api/books/recommendations','POST',{query:'gentle adventure'},'reader-b')).status,503);assert.equal(calls,1);
+  globalThis.fetch=async()=>new Response('private '+exaKey,{status:401});
+  const rejected=await req('/api/books/recommendations','POST',{query:'gentle adventure'},'reader-a');assert.equal(rejected.status,401);assert.equal((await rejected.text()).includes(exaKey),false);
+ } finally {globalThis.fetch=original;}
+ await req('/api/books/recommendations/key','PUT',{apiKey:exaKey},'reader-b');
+ assert.equal((await req('/api/books/recommendations/key','DELETE',{},'reader-a')).status,200);
+ assert.deepEqual(await (await req('/api/books/recommendations/config','GET',undefined,'reader-a')).json(),{configured:false});
+ assert.deepEqual(await (await req('/api/books/recommendations/config','GET',undefined,'reader-b')).json(),{configured:true});
+});
+
+test('recommendation settings validate writes and expire without exposing old keys',async()=>{
+ assert.equal((await req('/api/books/recommendations/key','PUT',{apiKey:key},'reader-b',{Origin:'https://evil.test'})).status,403);
+ assert.equal((await req('/api/books/recommendations/key','PUT',{apiKey:'tiny'},'reader-b')).status,400);
+ assert.equal((await req('/api/books/recommendations/key','PUT',{apiKey:key},'reader-b',{'X-Bookworm-Client':''})).status,400);
+ assert.equal((await req('/api/books/recommendations/key','PUT',{apiKey:'x'.repeat(17000)},'reader-b')).status,413);
+ database.exec('UPDATE recommendation_settings SET expires_at=0');
+ assert.deepEqual(await (await req('/api/books/recommendations/config','GET',undefined,'reader-b')).json(),{configured:false});
+ assert.equal((await req('/api/books/recommendations','POST',{query:'adventure'},'reader-b')).status,503);
+ await worker.scheduled({},env);
+ assert.equal(database.prepare('SELECT count(*) AS n FROM recommendation_settings').get().n,0);
+});
+
+test('concurrent searches and key removal are blocked until the active search finishes',async()=>{
+ await req('/api/books/recommendations/key','PUT',{apiKey:key},'search-lock');
+ const original=globalThis.fetch;let finish;let started;
+ const ready=new Promise(resolve=>{started=resolve;});
+ try {
+  globalThis.fetch=async()=>{started();await new Promise(resolve=>{finish=resolve;});return Response.json({results:[]});};
+  const first=req('/api/books/recommendations','POST',{query:'adventure'},'search-lock');await ready;
+  assert.equal((await req('/api/books/recommendations','POST',{query:'adventure'},'search-lock')).status,429);
+  assert.equal((await req('/api/books/recommendations/key','DELETE',{},'search-lock')).status,409);
+  finish();assert.equal((await first).status,200);
+  assert.equal((await req('/api/books/recommendations/key','DELETE',{},'search-lock')).status,200);
+ } finally {globalThis.fetch=original;finish?.();}
+});

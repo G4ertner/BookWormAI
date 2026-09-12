@@ -199,7 +199,8 @@ Installation references above were checked on September 12, 2026.
   the downloaded EPUB when prompted. If the picker does not open automatically,
   click “Choose the EPUB you just downloaded.”
 - **Add book → For you:** describe a topic or mood to find Gutenberg book matches.
-  Local setup requires server-only `EXA_API_KEY` in `.env`, then restart the server.
+  Open **Recommendation settings**, paste your **Exa API key**, and choose **Save Exa key**.
+  This works locally and on the hosted demo; narration keys are separate.
   Choose a result to continue through the existing Gutenberg import flow.
   See [recommendation setup and limits](docs/BOOK_RECOMMENDATIONS.md).
 - Open the book on your shelf, select a chapter, and press Play. Narration prepares
