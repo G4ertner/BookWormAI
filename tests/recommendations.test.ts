@@ -84,3 +84,29 @@ test('local HTTP search enforces origin, request limits and a single concurrent 
   assert.equal((await request('{"query":"mystery"}')).status,429);
   finish();assert.equal((await first).status,200);assert.equal(calls,1);
 });
+
+test('local recommendation key updates are write-only and removal persists over an environment fallback', async t => {
+  const {mkdtemp,rm}=await import('node:fs/promises');
+  const {tmpdir}=await import('node:os');
+  const {join}=await import('node:path');
+  const {loadApiKey,saveApiKey}=await import('../src/server/credentials.ts');
+  const directory=await mkdtemp(join(tmpdir(),'bookworm-exa-'));
+  const path=join(directory,'exa.json');
+  const key='dummy-exa-key-for-local-tests-12345';
+  const service=new ExaRecommendations('',async(_url,init)=>{assert.equal(new Headers(init?.headers).get('x-api-key'),key);return Response.json({results:[hit]});});
+  const server=createAudioServer(new OpenRouterSpeech(''),'/tmp/no-public-files',undefined,undefined,service,async value=>{await saveApiKey(path,value);service.setKey(value);});
+  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+  t.after(async()=>{await new Promise<void>(resolve=>{server.closeAllConnections();server.close(()=>resolve());});await rm(directory,{recursive:true,force:true});});
+  const address=server.address();assert(address && typeof address!=='string');
+  const base=`http://127.0.0.1:${address.port}/api/books/recommendations`;
+  const headers={'Content-Type':'application/json','X-Bookworm-Client':'audio-v1'};
+  const put=(apiKey:string)=>fetch(base+'/key',{method:'PUT',headers,body:JSON.stringify({apiKey})});
+  assert.equal((await put('tiny')).status,400);
+  const saved=await put(key);assert.equal(saved.status,200);assert(!JSON.stringify(await saved.json()).includes(key));
+  assert.deepEqual(await (await fetch(base+'/config')).json(),{configured:true});
+  assert.equal(await loadApiKey(path,''),key);
+  assert.equal((await fetch(base,{method:'POST',headers,body:JSON.stringify({query:'adventure'})})).status,200);
+  assert.equal((await fetch(base+'/key',{method:'DELETE',headers,body:'{}'})).status,200);
+  assert.deepEqual(await (await fetch(base+'/config')).json(),{configured:false});
+  assert.equal(await loadApiKey(path,'environment-fallback'),'');
+});

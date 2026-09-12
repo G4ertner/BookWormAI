@@ -14,13 +14,14 @@ export function mountKeySettings(pause: () => void, changed: (configured: boolea
     <p style="font-size:12px;margin:8px 0">Fish uses your OpenRouter key. OpenAI voices use your OpenAI key. Narration passages go to the selected provider through this server. </p>
     <button type="submit" style="padding:10px 16px;background:#294d3d;color:white;border-radius:6px">Apply model and voice</button>
   </form>
-  ${(['openrouter', 'openai'] as const).map(id => {
-    const name = id === 'openai' ? 'OpenAI' : 'OpenRouter';
+  ${(['openrouter', 'openai', 'exa'] as const).map(id => {
+    const name = id === 'exa' ? 'Exa' : id === 'openai' ? 'OpenAI' : 'OpenRouter';
     return `<form data-key-provider="${id}" autocomplete="off" style="margin-top:22px">
       <label for="${id}-key" style="display:block;font-weight:600;margin-bottom:8px">${name} API key</label>
       <input id="${id}-key" type="password" autocomplete="off" spellcheck="false" autocapitalize="none" minlength="20" maxlength="512" placeholder="Paste your ${name} key" required style="${fieldStyle}">
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px"><button type="submit" style="padding:10px 16px;background:#294d3d;color:white;border-radius:6px">Save ${name} key</button><button type="button" data-remove="${id}" style="padding:10px 16px;border:1px solid #ccc;border-radius:6px">Remove ${name} key</button></div>
       <p data-key-state="${id}" style="font-size:12px;margin-top:8px">Checking setup…</p>
+      ${id === 'exa' ? '<p style="font-size:12px">Exa powers For you recommendations. Only your submitted reading interest is sent to Exa; its API may require credits.</p>' : ''}
     </form>`;
   }).join('')}
   <p id="key-storage-note" style="font-size:12px;margin:12px 0">Keys stay on this service’s server and are sent only to their provider.</p>
@@ -48,11 +49,21 @@ export function mountKeySettings(pause: () => void, changed: (configured: boolea
     if (attempt !== epoch) return;
     if (!config.selection || !config.keys) throw new Error('Audio settings are unavailable. Reload to retry.');
     section.querySelector<HTMLElement>('#key-storage-note')!.textContent = config.keyStorage === 'session'
-      ? 'Keys belong to this browser session and expire after 24 hours without a settings update. Other browsers need their own setup. Use Remove on shared devices.'
+      ? 'Keys belong to this browser session. Exa keys expire 24 hours after saving; narration settings have a separate 24-hour expiry. Other browsers need their own setup. Use Remove on shared devices.'
       : 'Keys stay on this computer’s local server and survive restarts. They are never saved in browser storage. Each key is sent only to its provider.';
     model.value = config.selection.provider; voices(config.selection.voice || 'marin');
     for (const id of ['openrouter', 'openai'] as const) section.querySelector<HTMLElement>(`[data-key-state="${id}"]`)!.textContent = config.keys[id] ? 'Key saved. Provider acceptance has not been checked here. Press Play to test narration.' : 'No key saved for this provider.';
     changed(config.configured);
+    try {
+      const response = await fetch('/api/books/recommendations/config', { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error();
+      const search = await response.json();
+      if (attempt !== epoch) return;
+      section.querySelector<HTMLElement>('[data-key-state="exa"]')!.textContent = search.configured
+        ? 'Key saved. Use Find books in For you to test the connection.' : 'No Exa key saved. Add one to use For you.';
+    } catch {
+      if (attempt === epoch) section.querySelector<HTMLElement>('[data-key-state="exa"]')!.textContent = 'Could not load recommendation settings. Reopen settings to retry.';
+    }
   }
   async function update(path: string, method: string, body: unknown, message: string, reload = false): Promise<void> {
     if (busy) return;
@@ -71,10 +82,11 @@ export function mountKeySettings(pause: () => void, changed: (configured: boolea
     event.preventDefault(); void update('/api/audio/selection', 'PUT', { provider: model.value, voice: voice.value }, 'Narration updated.', true);
   });
   for (const form of section.querySelectorAll<HTMLFormElement>('[data-key-provider]')) {
-    const provider = form.dataset.keyProvider as ProviderId;
+    const provider = form.dataset.keyProvider as ProviderId | 'exa';
+    const path = provider === 'exa' ? '/api/books/recommendations/key' : '/api/audio/key';
     const input = form.querySelector<HTMLInputElement>('input')!;
-    form.addEventListener('submit', event => { event.preventDefault(); const apiKey = input.value.trim(); input.value = ''; void update('/api/audio/key', 'PUT', { provider, apiKey }, 'Key saved. Select its model and press Play to verify narration.'); });
-    form.querySelector('button[type="button"]')!.addEventListener('click', () => { input.value = ''; void update('/api/audio/key', 'DELETE', { provider }, 'Key removed for this provider. Cached audio can still play.'); });
+    form.addEventListener('submit', event => { event.preventDefault(); const apiKey = input.value.trim(); input.value = ''; void update(path, 'PUT', { provider, apiKey }, provider === 'exa' ? 'Exa key saved. Open Add book → For you, then Find books.' : 'Key saved. Select its model and press Play to verify narration.'); });
+    form.querySelector('button[type="button"]')!.addEventListener('click', () => { input.value = ''; void update(path, 'DELETE', { provider }, provider === 'exa' ? 'Exa key removed. Gutenberg search remains available.' : 'Key removed for this provider. Cached audio can still play.'); });
   }
   dialog.addEventListener('close', () => section.querySelectorAll<HTMLInputElement>('input').forEach(input => { input.value = ''; }));
   const refreshSafely = () => { if (!busy) void refresh().catch(() => { status.textContent = 'Cannot load settings. Reload to retry.'; }); };

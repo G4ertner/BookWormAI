@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { createAudioServer } from './app.ts';
+import { loadApiKey, saveApiKey } from './credentials.ts';
 import { ExaRecommendations } from './recommendations.ts';
 import { NarrationService } from './narration.ts';
 import { resolve } from 'node:path';
@@ -9,7 +10,9 @@ if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('This sin
 const port = Number(process.env.PORT || 4310);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('PORT must be between 1024 and 65535.');
 const provider = await NarrationService.open(resolve('.data'), { openrouter: process.env.OPENROUTER_API_KEY, openai: process.env.OPENAI_API_KEY, fishVoice: process.env.FISH_AUDIO_VOICE_ID });
-const server = createAudioServer(provider, fileURLToPath(new URL('../public/', import.meta.url)), (key, target) => provider.updateKey(key, target), { read: () => provider.settings(), select: selection => provider.select(selection) }, new ExaRecommendations(process.env.EXA_API_KEY));
+const searchKeyPath = resolve('.data/exa-settings.json');
+const recommendations = new ExaRecommendations(await loadApiKey(searchKeyPath, process.env.EXA_API_KEY || ''));
+const server = createAudioServer(provider, fileURLToPath(new URL('../public/', import.meta.url)), (key, target) => provider.updateKey(key, target), { read: () => provider.settings(), select: selection => provider.select(selection) }, recommendations, async key => { await saveApiKey(searchKeyPath, key); recommendations.setKey(key); });
 server.listen(port, host, () => {
   console.log(`BookWormAI audio: http://${host}:${port}`);
   console.log(`Narration: ${provider.profile.model}; ${provider.configured ? 'key configured; press Play to test' : 'add the provider key in narrator settings'}`);

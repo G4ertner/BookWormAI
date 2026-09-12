@@ -24,7 +24,10 @@ settings table; public sessions cannot access the old email-owned records.
 The demo is public and supplies no operator provider key. A 256-bit secure HttpOnly
 SameSite=Strict cookie scopes API settings to a browser session. Only the token hash
 is stored. Settings expire after 24 hours without a write; hourly cleanup removes
-expired rows. Keys are server-side and readable to database administrators, never
+expired rows. Exa settings use the independent `recommendation_settings` table
+(migration `0002_recommendation_keys.sql`); apply it before deploying this version.
+Each browser enters its own Exa key through Recommendation settings. No shared Exa
+secret is used. Keys are server-side and readable to database administrators, never
 returned by the API. On shared browser profiles, remove keys after use.
 
 Requests are rate-limited per IP/Cloudflare location. Body, passage, audio-size and

@@ -3,6 +3,7 @@ import type { BookRecommendation } from '../server/recommendations.ts';
 /** The browser receives book metadata only. Keys and Exa requests stay server-side. */
 export function mountRecommendations(host: {
   select(book: BookRecommendation): void;
+  settings(): void;
   shelvedIds(): ReadonlySet<number>;
 }): { cancel(): void; refresh(): Promise<void> } {
   const pick = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -12,6 +13,9 @@ export function mountRecommendations(host: {
   const cancelButton = pick<HTMLButtonElement>('recommend-cancel');
   const status = pick<HTMLParagraphElement>('recommend-status');
   const list = pick<HTMLDivElement>('recommend-results');
+  const setup = document.createElement('button'); setup.type = 'button'; setup.className = 'text-btn';
+  setup.textContent = 'Recommendation settings'; setup.addEventListener('click', () => { cancel(); host.settings(); });
+  status.after(setup);
   let request: AbortController | null = null;
   let configRequest: AbortController | null = null;
 
@@ -32,7 +36,7 @@ export function mountRecommendations(host: {
       if (!response.ok) throw new Error();
       const config = await response.json();
       if (configRequest !== controller) return;
-      status.textContent = config.configured ? 'Describe what you would enjoy reading next.' : 'Book recommendations are not connected yet. You can still use the Project Gutenberg tab.';
+      status.textContent = config.configured ? 'Describe what you would enjoy reading next.' : 'Add your Exa key in Recommendation settings to use For you. Gutenberg search still works without a key.';
     } catch {
       if (configRequest === controller) status.textContent = 'Could not check book search. Try Find books to retry.';
     } finally { if (configRequest === controller) configRequest = null; }

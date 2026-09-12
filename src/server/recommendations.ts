@@ -46,12 +46,13 @@ export function parseRecommendations(data: unknown): BookRecommendation[] {
 }
 
 export class ExaRecommendations {
-  constructor(private readonly apiKey = '', private readonly fetcher: typeof fetch = fetch) {}
+  constructor(private apiKey = '', private readonly fetcher: typeof fetch = fetch) {}
+  setKey(key: string): void { this.apiKey = key; }
   get configured(): boolean { return Boolean(this.apiKey.trim()); }
 
   async search(body: unknown, signal: AbortSignal): Promise<{ books: BookRecommendation[] }> {
     const query = recommendationQuery(body);
-    if (!this.configured) throw new SpeechError('SEARCH_KEY_MISSING', 'Book recommendations are not connected yet. You can still find books in Project Gutenberg.', 503);
+    if (!this.configured) throw new SpeechError('SEARCH_KEY_MISSING', 'Add your Exa API key in settings to use For you. Gutenberg search still works without a key.', 503);
     try {
       const fetcher = this.fetcher;
       const response = await fetcher('https://api.exa.ai/search', {
