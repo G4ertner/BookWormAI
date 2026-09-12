@@ -70,3 +70,9 @@ A scan of all staged files found no occurrence of the configured OpenRouter key.
 - Saving validates local input and persistence, not the OpenRouter account. Real
   key validity is checked when the user presses Play. Earlier live Fish narration
   evidence remains separate from these dummy-key setup checks.
+
+## OpenAI selection — 2026-09-12
+
+Typecheck, build and all 24 tests passed. Isolated browser checks verified
+separate OpenAI key entry, Cedar selection/reload and shared main/simplified
+settings. Live OpenAI generation is unverified. See [OpenAI evidence](OPENAI.md).

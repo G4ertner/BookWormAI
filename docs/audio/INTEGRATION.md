@@ -40,7 +40,7 @@ See `src/web/client.ts` for the bridge. `src/web/prototype/ui.js` contains prese
 
 Required headers: `Content-Type: application/json`, `X-Bookworm-Client: audio-v1`. Response: MP3 bytes, with optional `X-Generation-Id`. Errors are `{ "error": { "code": "...", "message": "..." } }`. Private upstream error bodies are never forwarded. The route enforces a 2,400 UTF-8 byte app cap, a 16 KB JSON body cap, two concurrent requests, 90-second upstream deadline, and an 8 MB audio response cap. These are application limits rather than claims about provider limits.
 
-The backend always selects `fish-audio/s2.1-pro-free:free`, explicitly requests MP3, and adds the configured voice ID only when present. There is no hidden model fallback, browser speech fallback, or automatic retry loop that can repeatedly spend credit. Play after a failure is the explicit retry.
+The backend defaults to `fish-audio/s2.1-pro-free:free`; users can explicitly select direct OpenAI GPT-4o Mini TTS and a built-in voice. Both request MP3. See [OpenAI configuration and API changes](OPENAI.md). There is no hidden model fallback, browser speech fallback, or automatic retry loop that can repeatedly spend credit. Play after a failure is the explicit retry.
 
 The free endpoint is rate limited and has no production latency or availability guarantee. This selection was verified in the [OpenRouter model listing](https://openrouter.ai/fish-audio/s2.1-pro-free:free) on 2026-09-12. No automatic fallback to a paid model is configured.
 
@@ -49,7 +49,7 @@ The free endpoint is rate limited and has no production latency or availability 
 ## Storage and privacy
 
 - Imported books, prepared notes, and the prototype's library position stay in local browser storage. The original EPUB is not uploaded to this server.
-- Current and one upcoming narration passage go through the local backend to OpenRouter/Fish Audio when Play is requested. Pause stops scheduling and cancels pending work where possible. An already dispatched request may still be billed upstream.
+- Current and one upcoming narration passage go through the local backend to the selected provider (OpenRouter/Fish or OpenAI) when Play is requested. Pause stops scheduling and cancels pending work where possible. An already dispatched request may still be billed upstream.
 - Audio blobs and their actual SHA-256 rendition IDs are cached in IndexedDB. Four recent assets stay in memory; the persistent cache targets 64 MB and evicts older unpinned assets. No book content or audio is stored on the server.
 - Resume positions use a separate browser namespace and contain IDs and milliseconds, not passage text. They are saved every two seconds during playback, on pause/seek, and on lifecycle notifications. Storage failures are visible.
 - Reuse the offset only when the exact cached rendition matches. Missing/changed audio restarts the current passage with a visible notice. Browser eviction and clearing site data may remove offline assets or progress.

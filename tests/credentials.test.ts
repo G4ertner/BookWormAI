@@ -22,7 +22,7 @@ test('key validation rejects empty, oversized and control-character input withou
   const valid = 'sk-or-v1-fixture-not-a-real-key';
   assert.equal(validateApiKey(` ${valid} `), valid);
   for (const invalid of ['', null, 5, 'x'.repeat(513), 'bad secret key with spaces', 'x'.repeat(20) + '\n' + 'secret']) {
-    assert.throws(() => validateApiKey(invalid), /Enter an OpenRouter API key/);
+    assert.throws(() => validateApiKey(invalid), /Enter an API key/);
   }
 });
 test('settings API changes active credentials, removes them and never returns them', async t => {

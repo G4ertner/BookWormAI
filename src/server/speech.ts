@@ -22,16 +22,18 @@ export class OpenRouterSpeech implements SpeechProvider {
   readonly profile: NarrationProfile;
   get configured(): boolean { return Boolean(this.key.trim()); }
   setKey(key: string): void { this.key = key; }
-  constructor(private key: string, voice?: string, private request: typeof fetch = fetch) {
+  constructor(private key: string, voice?: string, private request: typeof fetch = fetch, private provider: 'openrouter' | 'openai' = 'openrouter') {
     const voiceId = voice?.trim() || null;
-    this.profile = { id: createHash('sha256').update(JSON.stringify([MODEL, voiceId, 'mp3', 'v1'])).digest('hex'), model: MODEL, voice: voiceId };
+    const model = provider === 'openai' ? 'gpt-4o-mini-tts' : MODEL;
+    this.profile = { id: createHash('sha256').update(JSON.stringify([model, voiceId, 'mp3', 'v1'])).digest('hex'), model, voice: voiceId };
   }
   async synthesize(text: string, signal: AbortSignal): Promise<SpeechResult> {
     validateText(text);
-    if (!this.configured) throw new SpeechError('KEY_MISSING', 'Add your OpenRouter API key in narrator settings to start narration.', 503);
-    const body = { model: MODEL, input: text, response_format: 'mp3', ...(this.profile.voice ? { voice: this.profile.voice } : {}) };
+    const brand = this.provider === 'openai' ? 'OpenAI' : 'OpenRouter';
+    if (!this.configured) throw new SpeechError('KEY_MISSING', `Add your ${brand} API key in narrator settings to start narration.`, 503);
+    const body = { model: this.profile.model, input: text, response_format: 'mp3', ...(this.profile.voice ? { voice: this.profile.voice } : {}) };
     try {
-      const response = await this.request('https://openrouter.ai/api/v1/audio/speech', {
+      const response = await this.request(this.provider === 'openai' ? 'https://api.openai.com/v1/audio/speech' : 'https://openrouter.ai/api/v1/audio/speech', {
         method: 'POST', headers: { Authorization: `Bearer ${this.key}`, 'Content-Type': 'application/json', 'X-Title': 'BookWormAI' },
         body: JSON.stringify(body), signal: AbortSignal.any([signal, AbortSignal.timeout(90000)]),
       });
@@ -39,12 +41,12 @@ export class OpenRouterSpeech implements SpeechProvider {
         // Never forward untrusted upstream bodies: they may echo keys or private text.
         await response.body?.cancel();
         const errors: Record<number, [string, string, number]> = {
-          400: ['VOICE_CONFIGURATION', 'The provider rejected the speech settings. Check FISH_AUDIO_VOICE_ID on the server, then retry.', 422],
-          401: ['KEY_REJECTED', 'OpenRouter rejected the API key. Update it in narrator settings.', 401],
-          402: ['CREDIT_REQUIRED', 'Your OpenRouter account needs credit before narration can continue.', 402],
-          403: ['ACCESS_DENIED', 'This OpenRouter key cannot access the selected voice model.', 403],
-          404: ['MODEL_UNAVAILABLE', 'The selected Fish Audio model is unavailable. Your reading position is saved.', 503],
-          429: ['RATE_LIMITED', 'OpenRouter is rate limiting narration. Wait briefly, then press Play to retry.', 429],
+          400: ['VOICE_CONFIGURATION', 'The provider rejected the speech settings. Check the selected voice, then retry.', 422],
+          401: ['KEY_REJECTED', `${brand} rejected the API key. Update it in narrator settings.`, 401],
+          402: ['CREDIT_REQUIRED', `Your ${brand} account needs credit before narration can continue.`, 402],
+          403: ['ACCESS_DENIED', `This ${brand} key cannot access the selected voice model.`, 403],
+          404: ['MODEL_UNAVAILABLE', 'The selected audio model is unavailable. Your reading position is saved.', 503],
+          429: ['RATE_LIMITED', `${brand} has limited requests or quota. Check your account, then press Play to retry.`, 429],
         };
         const [code, message, status] = errors[response.status] ?? ['PROVIDER_UNAVAILABLE', 'The voice provider is temporarily unavailable. Press Play to retry.', 502];
         throw new SpeechError(code, message, status);
@@ -71,7 +73,11 @@ export class OpenRouterSpeech implements SpeechProvider {
       if (error instanceof SpeechError) throw error;
       if (signal.aborted) throw new SpeechError('CANCELLED', 'Narration was cancelled.', 499);
       if (error instanceof Error && error.name === 'TimeoutError') throw new SpeechError('TIMEOUT', 'Narration took too long. Press Play to retry.', 504);
-      throw new SpeechError('NETWORK_ERROR', 'The server could not reach OpenRouter. Check the connection and retry.', 502);
+      throw new SpeechError('NETWORK_ERROR', `The server could not reach ${brand}. Check the connection and retry.`, 502);
     }
   }
+}
+
+export class OpenAISpeech extends OpenRouterSpeech {
+  constructor(key: string, voice = 'marin', request: typeof fetch = fetch) { super(key, voice, request, 'openai'); }
 }

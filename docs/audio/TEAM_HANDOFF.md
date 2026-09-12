@@ -17,7 +17,7 @@ cp .env.example .env
 ```
 
 In an existing checkout, fetch and switch to this branch without discarding local
-changes. Do not overwrite an existing `.env`. Run the app, then enter your own OpenRouter key in either version’s settings popup:
+changes. Do not overwrite an existing `.env`. Run the app, then enter the selected provider’s key in either version’s settings popup:
 
 ```sh
 pnpm dev
@@ -41,8 +41,8 @@ Opening a `file://` prototype does not use this audio service.
 
 ## Current configuration
 
-- Model: `fish-audio/s2.1-pro-free:free`, selected in `src/audio/types.ts`.
-- Provider: OpenRouter, `POST https://openrouter.ai/api/v1/audio/speech`.
+- Default model: `fish-audio/s2.1-pro-free:free`. Settings also offers direct OpenAI `gpt-4o-mini-tts` with 13 built-in voices. See [OpenAI setup and storage](OPENAI.md).
+- Providers: OpenRouter for Fish; direct OpenAI for GPT-4o Mini TTS. Separate keys, explicit selection, no automatic fallback.
 - API key: use Save/Remove in the settings popup. Keys persist server-side in ignored `.data/audio-settings.json` (owner-only file permissions on macOS/Linux, plaintext rather than OS keychain). The saved value overrides `OPENROUTER_API_KEY` in `.env`; an empty saved value keeps narration disabled after restart. Both versions share this local setting. Cached audio remains playable after removal.
 - `FISH_AUDIO_VOICE_ID`: optional; blank uses the provider default. No fixed voice
   has been auditioned, and the UI's narrator-direction preference is preview only.
@@ -93,7 +93,7 @@ with a notice. Neither surface offers cross-device storage or backup.
 
 Already observed: live Fish Free synthesis, progressive simplified-reader
 playback, pause/reload/resume, speed change, EPUB spine order and completion,
-and chapter selection. Automated coverage: 21 unit/HTTP tests, typecheck and
+and chapter selection. Automated coverage: 24 unit/HTTP tests, typecheck and
 build. See [VERIFICATION.md](VERIFICATION.md) and
 [SIMPLE_READER.md](SIMPLE_READER.md) for the scope of each observation.
 

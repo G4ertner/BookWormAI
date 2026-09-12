@@ -21,8 +21,8 @@ The original reference is local-only; a fresh checkout runs entirely from
 - `src/server/`: shared server-side OpenRouter speech API and credentials.
 - `src/web/`: existing main version; do not replace it when editing the team reader.
 
-Both use `fish-audio/s2.1-pro-free:free` with the same local server settings. The settings popup in either version
-now saves/removes the shared OpenRouter key; no model fallback is introduced. Imported books stay in browser
+Both default to `fish-audio/s2.1-pro-free:free` with the same local server settings. The settings popup in either version
+saves/removes separate provider keys and selects the model and voice; no model fallback is introduced. See [the OpenAI option](OPENAI.md). Imported books stay in browser
 storage; current and prefetched passages are sent to OpenRouter when listening.
 Narrator direction remains a labeled preview preference, not a synthesis control.
 

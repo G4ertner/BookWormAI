@@ -9,6 +9,9 @@ listen to AI narration, and continue from the last reading position.
 > Fish Audio S2.1 Pro Free through OpenRouter. Its backend and playback controller
 > are independent of the UI. The ignored `starter-kit/` remains reference only.
 
+Both settings popups also offer [OpenAI narration and voice selection](docs/audio/OPENAI.md)
+with a separate OpenAI API key. Fish Free remains the default.
+
 **Team start here:** [Audio and simplified-reader handoff](docs/audio/TEAM_HANDOFF.md)
 includes fresh-checkout setup, editing boundaries, acceptance checks and next tasks.
 

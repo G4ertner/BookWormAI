@@ -24,9 +24,9 @@ const controller = new AudioController(new BrowserMedia(), assets, position => {
 function renderStatus(): void {
   const state = controller.snapshot();
   banner.textContent = state.error || state.notice || warning || connectionError ||
-    (!config.configured ? 'Add your OpenRouter API key in settings to listen. You can still read your books.' :
+    (!config.configured ? 'Add the selected provider’s API key in settings to listen. You can still read your books.' :
       state.status === 'preparing' ? 'Preparing your next passage… You can pause or choose another passage.' :
-      config.profile.model === 'test/fixture' ? 'Test audio fixture · not Fish Audio narration.' : 'Fish Audio narration · your place is saved automatically.');
+      config.profile.model === 'test/fixture' ? 'Test audio fixture · not Fish Audio narration.' : `${config.profile.model === 'gpt-4o-mini-tts' ? 'OpenAI' : 'Fish Free'} narration · your place is saved automatically.`);
   banner.classList.toggle('error', Boolean(state.error || connectionError || !config.configured));
 }
 controller.subscribe(renderStatus);

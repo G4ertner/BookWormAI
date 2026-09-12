@@ -16,14 +16,17 @@ export async function loadApiKey(path: string, fallback: string): Promise<string
 }
 export function validateApiKey(value: unknown): string {
   if (typeof value !== 'string' || !/^[\x21-\x7e]{20,512}$/.test(value.trim()))
-    throw new SpeechError('INVALID_KEY', 'Enter an OpenRouter API key without spaces (20–512 characters).', 400);
+    throw new SpeechError('INVALID_KEY', 'Enter an API key without spaces (20–512 characters).', 400);
   return value.trim();
 }
 export async function saveApiKey(path: string, apiKey: string): Promise<void> {
+  return saveSettingsFile(path, { apiKey });
+}
+export async function saveSettingsFile(path: string, value: unknown): Promise<void> {
   const temporary = `${path}.${randomUUID()}.tmp`;
   try {
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-    await writeFile(temporary, JSON.stringify({ apiKey }), { mode: 0o600, flag: 'wx' });
+    await writeFile(temporary, JSON.stringify(value), { mode: 0o600, flag: 'wx' });
     await rename(temporary, path);
   } catch {
     throw new SpeechError('KEY_SAVE_FAILED', 'The local server could not save the key. Check its settings-folder permissions.', 500);
