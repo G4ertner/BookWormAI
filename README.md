@@ -9,6 +9,19 @@ listen to AI narration, and continue from the last reading position.
 > locally in the ignored `starter-kit/` folder for reference and is not part
 > of the collaborative source tree.
 
+## Product intent
+
+BookWormAI is a quieter way to go deeper: listen to a book, interrupt to ask
+about the current passage, and return later exactly where you left off. The
+product is intentionally a simple bring-your-own-key experience. Users supply
+their own OpenAI API key through settings reachable from the library; accounts,
+profiles, and service-operated AI billing are outside the initial scope.
+
+The visual prototype in the local planning materials establishes the product
+direction, not a production implementation. Its primary concepts are a
+personal shelf, a focused listen/read room, passage questions, saved insights,
+and a narrator/settings panel.
+
 ## MVP demo
 
 The team is optimizing for one reliable vertical slice:
@@ -17,11 +30,44 @@ The team is optimizing for one reliable vertical slice:
 2. parse and display the book/chapter list;
 3. open a chapter in read mode;
 4. narrate the current passage with play/pause controls;
-5. bookmark and restore the current position.
+5. automatically save and restore the listening position.
 
 The reading context matters: the agent should know the selected book, chapter,
 passage, and position. A later extension may add a reading-along voice agent
 or chat with the narrator, but those are not required for the first demo.
+
+### Three-screen flow
+
+1. **Library / landing:** show imported books and provide **Add Book** plus
+   access to API-key and listening settings.
+2. **Add Books:** import a DRM-free EPUB from the device, with an optional
+   lightweight Project Gutenberg discovery/import route.
+3. **Listen / read mode:** show the selected book and cover, offer a prominent
+   play action, expose chapter navigation, and resume the saved position.
+
+### Core behavior
+
+- Accept local EPUBs and EPUB downloads from the chosen Gutenberg route.
+- Parse ordered, narratable content with identifiable chapters and skip
+  imprint/publishing front matter when the actual story start can be inferred.
+- Narrate progressively, part by part, so playback does not wait for a full
+  book conversion. Chunking, prefetching, caching, streaming, and retry
+  behavior must be validated during implementation.
+- Save each book's position periodically and on supported lifecycle events so
+  closing or interrupting the app does not lose the listener's place. Exact
+  sample-level recovery is not promised until a replay tolerance is chosen.
+- Treat narrator-direction generation as optional enhancement work. Creative
+  direction may guide tone, but the product must not promise reproduction of a
+  specific actor or character voice.
+
+### Later, if time permits
+
+- read-along text with subtitle-like highlighting;
+- a live conversational narrator;
+- accounts and profiles after the initial bring-your-own-key flow.
+
+Manual named bookmarks and cross-device progress sync are not part of the
+initial intent.
 
 ## Planned architecture
 
@@ -56,6 +102,14 @@ from scratch. When the scaffold is added, document its exact prerequisites,
 install, and development commands here.
 
 The inherited starter reference can be inspected locally at `starter-kit/`.
+The source planning notes and UI prototype are currently local-only under
+`project_documents/`; the product summary above is the checked-in team
+reference until those materials are deliberately added to the repository.
+
+Before choosing a scaffold, validate EPUB reading order/story-start behavior,
+Expo Web and Expo Go support for import, parsing, audio, and persistence, the
+safe API-key storage/removal boundary on web and Android, current OpenAI TTS
+limits, and behavior when the key, network, or generation pipeline fails.
 
 ## Team repository
 
