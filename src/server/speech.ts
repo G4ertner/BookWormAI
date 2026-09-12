@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { MODEL, MAX_PASSAGE_BYTES } from '../audio/types.ts';
 import type { NarrationProfile } from '../audio/types.ts';
 
@@ -13,7 +12,7 @@ export interface SpeechProvider {
 }
 export function validateText(value: unknown): string {
   if (typeof value !== 'string' || !value.trim()) throw new SpeechError('INVALID_TEXT', 'Choose a passage containing readable text.', 400);
-  if (Buffer.byteLength(value, 'utf8') > MAX_PASSAGE_BYTES) throw new SpeechError('TEXT_TOO_LONG', 'This passage is too long. Split it into smaller passages.', 413);
+  if (new TextEncoder().encode(value).length > MAX_PASSAGE_BYTES) throw new SpeechError('TEXT_TOO_LONG', 'This passage is too long. Split it into smaller passages.', 413);
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(value)) throw new SpeechError('INVALID_TEXT', 'The passage contains unsupported control characters.', 400);
   return value;
 }
@@ -25,7 +24,7 @@ export class OpenRouterSpeech implements SpeechProvider {
   constructor(private key: string, voice?: string, private request: typeof fetch = fetch, private provider: 'openrouter' | 'openai' = 'openrouter') {
     const voiceId = voice?.trim() || null;
     const model = provider === 'openai' ? 'gpt-4o-mini-tts' : MODEL;
-    this.profile = { id: createHash('sha256').update(JSON.stringify([model, voiceId, 'mp3', 'v1'])).digest('hex'), model, voice: voiceId };
+    this.profile = { id: btoa(JSON.stringify([model, voiceId, 'mp3', 'v1'])), model, voice: voiceId };
   }
   async synthesize(text: string, signal: AbortSignal): Promise<SpeechResult> {
     validateText(text);
@@ -33,7 +32,7 @@ export class OpenRouterSpeech implements SpeechProvider {
     if (!this.configured) throw new SpeechError('KEY_MISSING', `Add your ${brand} API key in narrator settings to start narration.`, 503);
     const body = { model: this.profile.model, input: text, response_format: 'mp3', ...(this.profile.voice ? { voice: this.profile.voice } : {}) };
     try {
-      // Call native fetch without binding it to this provider (required by Workers).
+      // Workers' native fetch rejects the provider instance as its `this` value.
       const request = this.request;
       const response = await request(this.provider === 'openai' ? 'https://api.openai.com/v1/audio/speech' : 'https://openrouter.ai/api/v1/audio/speech', {
         method: 'POST', headers: { Authorization: `Bearer ${this.key}`, 'Content-Type': 'application/json', 'X-Title': 'BookWormAI' },
@@ -67,8 +66,8 @@ export class OpenRouterSpeech implements SpeechProvider {
           parts.push(value);
         }
       } finally { reader.releaseLock(); }
-      const bytes = Buffer.concat(parts);
-      const isMp3 = bytes.subarray(0, 3).toString() === 'ID3' || (bytes[0] === 0xff && ((bytes[1] ?? 0) & 0xe0) === 0xe0);
+      const bytes = new Uint8Array(length); let offset = 0; for (const part of parts) { bytes.set(part, offset); offset += part.length; }
+      const isMp3 = new TextDecoder().decode(bytes.subarray(0, 3)) === 'ID3' || (bytes[0] === 0xff && ((bytes[1] ?? 0) & 0xe0) === 0xe0);
       if (length < 32 || !isMp3) throw new SpeechError('INVALID_AUDIO', 'The voice provider returned empty or invalid MP3 audio. Please retry.');
       return { bytes, contentType: 'audio/mpeg', generationId: response.headers.get('x-generation-id') ?? undefined };
     } catch (error) {

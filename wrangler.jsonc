@@ -1,0 +1,31 @@
+{
+  "name": "bookworm-simple-reader",
+  "account_id": "a0f25c7e4448e3cc309f66531f6bc68a",
+  "main": "dist/cloudflare/worker.js",
+  "compatibility_date": "2026-09-12",
+  "workers_dev": true,
+  "preview_urls": false,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bookworm-simple-reader",
+      "migrations_dir": "migrations",
+      "database_id": "84aab702-0060-46ef-8e55-eb2404ea4e85"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "API_LIMIT",
+      "namespace_id": "739124601",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "17 * * * *"
+    ]
+  }
+}
