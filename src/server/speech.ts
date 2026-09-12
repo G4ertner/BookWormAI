@@ -33,7 +33,9 @@ export class OpenRouterSpeech implements SpeechProvider {
     if (!this.configured) throw new SpeechError('KEY_MISSING', `Add your ${brand} API key in narrator settings to start narration.`, 503);
     const body = { model: this.profile.model, input: text, response_format: 'mp3', ...(this.profile.voice ? { voice: this.profile.voice } : {}) };
     try {
-      const response = await this.request(this.provider === 'openai' ? 'https://api.openai.com/v1/audio/speech' : 'https://openrouter.ai/api/v1/audio/speech', {
+      // Call native fetch without binding it to this provider (required by Workers).
+      const request = this.request;
+      const response = await request(this.provider === 'openai' ? 'https://api.openai.com/v1/audio/speech' : 'https://openrouter.ai/api/v1/audio/speech', {
         method: 'POST', headers: { Authorization: `Bearer ${this.key}`, 'Content-Type': 'application/json', 'X-Title': 'BookWormAI' },
         body: JSON.stringify(body), signal: AbortSignal.any([signal, AbortSignal.timeout(90000)]),
       });

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    // src/gutenberg.ts has no top-level import/export, so TypeScript treats it
+    // as a script and emits plain JS with no module wrapper. The build inlines
+    // that output as a classic <script>: an inline ES module would be invisible
+    // to the page's other script, and an external one would not load from
+    // file:// at all.
+    "module": "ES2022",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "rootDir": "src",
+    "outDir": "build",
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}

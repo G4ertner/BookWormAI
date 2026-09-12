@@ -1,5 +1,10 @@
 # BookWormAI
 
+**Combined demo:** run `pnpm dev` and open [the reader](http://127.0.0.1:4310/simple/).
+It combines device EPUB/TXT import, live Project Gutenberg search and book adding,
+OpenRouter/OpenAI narration, and saved listening progress. [Runbook and verification](docs/audio/CONSOLIDATED_READER.md).
+The original main UI remains at `/`; `bookworm/index.html` is the standalone search prototype.
+
 BookWormAI is an Expo Web/React Native hackathon project with a TypeScript
 runtime and an optional Go service boundary. It turns a user's own EPUB files
 into an audiobook-like reading experience: import a book, choose a chapter,

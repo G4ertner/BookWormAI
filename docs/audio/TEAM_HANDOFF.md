@@ -124,7 +124,7 @@ Next bounded tasks, in order:
 4. **Platform decision:** choose an Expo/native adapter only when the team needs
    it. Physical Android, Expo Go and background/screen-off playback are unverified.
 
-Live questions/chat, narrator-direction synthesis, Gutenberg discovery, accounts,
+Live questions/chat, narrator-direction synthesis, accounts,
 and cloud storage are not implemented by this contribution.
 
 ## Troubleshooting

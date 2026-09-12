@@ -22,7 +22,7 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string, u
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://www.gutenberg.org; object-src 'none'; base-uri 'none'; frame-ancestors 'none'");
     const address = server.address();
     const port = typeof address === 'object' && address ? address.port : 4310;
     const hosts = [`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`];

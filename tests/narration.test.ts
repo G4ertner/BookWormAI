@@ -12,7 +12,8 @@ test('OpenAI selection sends only its key and voice to the direct endpoint; Fish
   const directory = await mkdtemp(join(tmpdir(), 'bookworm-providers-'));
   t.after(() => rm(directory, { recursive: true }));
   const calls: { url: string; auth: string | null; body: object }[] = [];
-  const service = await NarrationService.open(directory, { openrouter: 'router-secret', openai: 'openai-secret' }, async (url, init) => {
+  const service = await NarrationService.open(directory, { openrouter: 'router-secret', openai: 'openai-secret' }, async function(this: unknown, url, init) {
+    assert.equal(this, undefined, 'native fetch must not receive the provider as its receiver');
     calls.push({ url: String(url), auth: new Headers(init?.headers).get('authorization'), body: JSON.parse(String(init?.body)) });
     return new Response(mp3, { headers: { 'Content-Type': 'audio/mpeg' } });
   });
