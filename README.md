@@ -4,19 +4,193 @@ One reader for your own books: add a DRM-free EPUB or TXT file, discover books o
 Project Gutenberg, listen with OpenRouter or OpenAI, and resume where you stopped.
 The simplified reader is the only application. Local and Cloudflare builds share its source.
 
-## Run locally
+## Choose how to get started
 
-Requires Node 22.14+ and pnpm 11.
+| What you want to do | Where to start |
+| --- | --- |
+| Try a demo shared by a teammate | Open their link in your browser. No software installation is needed. |
+| Run BookWormAI on your own computer | Follow the first-time setup below. You do not need coding experience or Git. |
+| Work on the code | Use the Git option below, then see “Checks for contributors.” |
+
+Reading and importing books do not need an AI key. Narration needs your own
+OpenRouter or OpenAI API key and an internet connection. A provider may require
+credits or impose usage limits. Your demo setup and local setup are separate.
+
+## First-time setup on your computer
+
+Allow time for the first download. You will install two tools: **Node.js** runs the
+app, and **pnpm** downloads the software packages the app needs (“dependencies”).
+
+### 1. Install Node.js
+
+Open the [official Node.js download page](https://nodejs.org/en/download), select
+**Node.js 22 LTS**, and use the latest available patch in that line. The project
+requires Node.js **22.14 or newer** and pins pnpm to **11.0.9**.
+
+| Your computer | How to install Node.js | Where to type commands afterward |
+| --- | --- | --- |
+| macOS | Choose the macOS `.pkg` installer and follow its prompts. | Open **Terminal** using Spotlight (Command + Space). |
+| Windows | Choose the Windows `.msi` installer and follow its prompts. Keep npm and PATH options enabled. | Open **Command Prompt** from the Start menu. The Windows examples below use Command Prompt. |
+| Linux | Select Linux on the Node.js download page and follow its installation instructions for Node.js 22. | Open your distribution’s **Terminal** app. |
+
+Close and reopen the terminal after installation. Type each command below and
+press Enter after each line. Do not copy the surrounding code-box markers.
+
+```sh
+node --version
+npm --version
+```
+
+Both commands should print a version number. If either says “command not found” or
+“not recognized,” reopen the terminal or finish the Node.js installation first.
+
+### 2. Install pnpm
+
+Run this once, on any of the platforms above:
+
+```sh
+npm install --global pnpm@11.0.9
+pnpm --version
+```
+
+The second command should print `11.0.9`. We use npm only to install pnpm; use pnpm
+for BookWormAI’s dependencies. If installation reports a permissions error, see
+“Troubleshooting” below. The project pins this version; generic instructions on the
+[pnpm installation page](https://pnpm.io/installation) may describe a newer release.
+
+### 3. Download BookWormAI
+
+**Without Git — recommended for first-time users:**
+
+1. Open the [BookWormAI repository](https://github.com/G4ertner/BookWormAI).
+2. Make sure the branch selector says **main**.
+3. Click the green **Code** button, then **Download ZIP**.
+4. Extract the ZIP: double-click it on macOS, use **Extract All** on Windows, or
+   your archive manager on Linux. You must extract it before continuing.
+5. Open the extracted folder. You should see `README.md` and `package.json` together.
+
+These steps follow [GitHub’s source-download guide](https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives).
+
+In your terminal, enter that folder. If you extracted it into Downloads without
+renaming it, use the matching command:
+
+**macOS / Linux:**
+
+```sh
+cd "$HOME/Downloads/BookWormAI-main"
+```
+
+**Windows Command Prompt:**
+
+```bat
+cd /d "%USERPROFILE%\Downloads\BookWormAI-main"
+```
+
+If you saved it somewhere else, replace the path with that folder’s actual path.
+Keep the quotes around paths containing spaces. On Windows you can copy the folder
+path from File Explorer’s address bar. On macOS you can type `cd ` and drag the
+extracted folder into Terminal, then press Enter.
+
+**With Git — for contributors who already have Git installed:**
+
+```sh
+git clone https://github.com/G4ertner/BookWormAI.git
+cd BookWormAI
+```
+
+Choose either ZIP or Git; you do not need both.
+
+### 4. Install the app’s dependencies
+
+From the folder containing `package.json`, run:
 
 ```sh
 pnpm install --frozen-lockfile
+```
+
+Wait until the command finishes and the terminal prompt returns. This downloads
+the required packages into `node_modules`; you do not install them individually.
+The lockfile keeps teammates on the same package versions. The project also has a
+24-hour minimum package release age configured in `pnpm-workspace.yaml`.
+
+### 5. Start the app
+
+In the same terminal and folder, run:
+
+```sh
 pnpm dev
 ```
 
-Open **http://127.0.0.1:4310/**. Existing `/simple/` links open the same app.
-From Library → Narrator settings, save your provider key and choose a model/voice.
-Optional environment setup: copy `.env.example` to `.env` and fill in a provider key.
-Never overwrite an existing `.env`. Keys saved in settings override environment keys.
+This builds the app and starts a local server. When the terminal shows
+`BookWormAI audio: http://127.0.0.1:4310`, open
+**[http://127.0.0.1:4310/](http://127.0.0.1:4310/)** in your browser.
+You should see **My library** and sample books.
+
+Keep that terminal open while using the app. The address works on this computer;
+it is not a shareable website link. Do not double-click the HTML source file.
+Existing `/simple/` links open the same reader.
+
+### 6. Connect narration
+
+1. From **My library**, open **Narrator settings**.
+2. Choose the narration model: Fish uses **OpenRouter**; OpenAI voices use **OpenAI**.
+3. Paste the matching provider’s API key into its field and click **Save**.
+4. Choose a voice if available, then click **Apply model and voice**.
+5. Open a sample book and press **Play** to test the connection.
+
+An API key is a private credential from your provider’s developer dashboard. Keep
+it out of chat messages, screenshots and Git commits. You only need the key for
+the provider you choose. “Key saved” confirms storage; Play checks whether the
+provider accepts it.
+
+For normal local setup, use the popup; no `.env` editing is needed. Advanced users
+can copy `.env.example` to `.env` and fill in a provider key. Do not overwrite an
+existing `.env`. Keys saved in settings override environment keys.
+
+## Stop, reopen or update
+
+- **Stop:** select the running terminal and press **Ctrl + C** (also on macOS).
+- **Reopen later:** open a terminal in the same project folder, run `pnpm dev`,
+  and open the same browser address. You do not reinstall Node.js or pnpm each time.
+- **After a Git update:** stop the app, run `git pull --ff-only`, then
+  `pnpm install --frozen-lockfile` and `pnpm dev`. If you have local edits, resolve
+  them before updating; do not discard them just to make the command succeed.
+- **After a ZIP update:** extract the new download to a separate folder and repeat
+  steps 4–6 there. Keep the old folder until the new copy works. Local server keys
+  belong to the old folder, so enter them again in the new copy’s settings.
+
+Use the same browser profile and exact address to retain your library and progress.
+Clearing that site’s browser data removes them. Books are not automatically backed up;
+keep the original EPUB/TXT files.
+
+## Troubleshooting
+
+| What you see | What to do |
+| --- | --- |
+| `node`, `npm` or `pnpm` is not recognized | Reopen the terminal, then check steps 1–2. |
+| `package.json` cannot be found | You are in the wrong folder. Use `cd` to enter the extracted/cloned folder containing `package.json`. |
+| A Node.js version error | Run `node --version`; install Node.js 22 LTS with a patch version at least 22.14. |
+| Package downloads fail | Check your internet connection, then retry `pnpm install --frozen-lockfile`. If it still fails, share the error text with a teammate, without keys. |
+| A lockfile or dependency-build approval error | Confirm you downloaded one complete main revision and are using pnpm 11.0.9. Ask a maintainer to check the lockfile/build allowances; do not delete the lockfile or approve every script. |
+| The browser says it cannot connect | Confirm `pnpm dev` is still running and use the exact address printed in the terminal. |
+| Port 4310 is already in use | Stop the earlier BookWormAI terminal with Ctrl + C before starting another copy. |
+| Key rejected, quota exceeded or credits required | Check the selected provider and key in Narrator settings, then check that provider’s account dashboard. |
+| Browser storage is full | New changes may last only for this session. Keep your original book files; do not clear site data unless you intend to remove the saved library. |
+
+**If installing pnpm globally fails with a permissions error**, you can run the
+pinned pnpm through npm’s launcher instead. From the project folder, use:
+
+```sh
+npx --yes pnpm@11.0.9 install --frozen-lockfile
+npx --yes pnpm@11.0.9 dev
+```
+
+These commands still use pnpm to install and run the project. Use the second
+command again when reopening. Avoid changing system permissions just to install it.
+
+Local browser acceptance has been performed on macOS with Node.js 22. Windows and
+Linux instructions have not yet been tested on physical devices for this project.
+Installation references above were checked on September 12, 2026.
 
 ## Use
 
@@ -37,7 +211,7 @@ Books and listening position stay in the same browser/origin. Localhost and the
 hosted demo have separate libraries. EPUB front matter may be the first section;
 use Chapters to select the story. Unsupported or encrypted EPUBs require a text export.
 
-## Verify
+## Checks for contributors
 
 ```sh
 pnpm check
@@ -48,19 +222,6 @@ pnpm smoke:audio
 `check` runs type checking, both builds, application tests, and Cloudflare tests.
 Automated provider tests use fixtures. `smoke:audio` generates one short passage
 using the selected provider and may consume quota/credit.
-
-## Deploy to the existing Cloudflare demo
-
-```sh
-pnpm check
-pnpm exec wrangler whoami
-pnpm exec wrangler d1 migrations apply bookworm-simple-reader --remote
-pnpm run deploy
-```
-
-See [deployment details](docs/DEPLOYMENT.md), [architecture](docs/ARCHITECTURE.md),
-and [verification evidence](docs/VERIFICATION.md). Never add shared provider keys to
-this public Worker. Saved keys are isolated by browser session and expire.
 
 ## Source map
 
@@ -73,6 +234,5 @@ this public Worker. Saved keys are isolated by browser session and expire.
 | `migrations/` | Existing Cloudflare D1 schema history |
 | `tests/`, `scripts/` | Checks, build, sample EPUB generator and optional audio smoke |
 
-Old interfaces and planning docs are recoverable from Git history. Pre-existing
-untracked artifacts were moved to ignored `output/cleanup-archive-20260912/` during
-cleanup. Personal settings, books, audio, and presentation assets are not application source.
+See [architecture](docs/ARCHITECTURE.md) and [verification evidence](docs/VERIFICATION.md)
+for implementation details and the recorded test results.
