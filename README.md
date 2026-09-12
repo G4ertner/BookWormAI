@@ -5,16 +5,22 @@ runtime and an optional Go service boundary. It turns a user's own EPUB files
 into an audiobook-like reading experience: import a book, choose a chapter,
 listen to AI narration, and continue from the last reading position.
 
-> Status: clean-slate project setup. The inherited starter tree is preserved
-> locally in the ignored `starter-kit/` folder for reference and is not part
-> of the collaborative source tree.
+> Status: the first audio MVP runs against the existing HTML prototype, using
+> Fish Audio S2.1 Pro Free through OpenRouter. Its backend and playback controller
+> are independent of the UI. The ignored `starter-kit/` remains reference only.
+
+Both settings popups also offer [OpenAI narration and voice selection](docs/audio/OPENAI.md)
+with a separate OpenAI API key. Fish Free remains the default.
+
+**Team start here:** [Audio and simplified-reader handoff](docs/audio/TEAM_HANDOFF.md)
+includes fresh-checkout setup, editing boundaries, acceptance checks and next tasks.
 
 ## Product intent
 
 BookWormAI is a quieter way to go deeper: listen to a book, interrupt to ask
 about the current passage, and return later exactly where you left off. The
 product is intentionally a simple bring-your-own-key experience. Users supply
-their own OpenAI API key through settings reachable from the library; accounts,
+their own OpenRouter API key in either version's settings popup; accounts,
 profiles, and service-operated AI billing are outside the initial scope.
 
 The visual prototype in the local planning materials establishes the product
@@ -71,6 +77,11 @@ initial intent.
 
 ## Planned architecture
 
+The audio contribution now implements a small Node/TypeScript runtime and a
+browser adapter. Expo/native application scaffolding remains unselected.
+See [the audio integration contract](docs/audio/INTEGRATION.md) for the typed
+interfaces, API, storage boundary, and how to replace the prototype UI.
+
 | Surface | Responsibility |
 | --- | --- |
 | Expo Web/React Native client | Library, EPUB import, reader, playback, and optional native agent UI |
@@ -78,10 +89,9 @@ initial intent.
 | Optional Go service | Add only when the team chooses a concrete service boundary |
 | Shared typed modules | EPUB parsing, chapter extraction, reading position, and audio state |
 
-The whiteboard also mentions Go. The starter kit is TypeScript-first today; add
-a Go service only when the team has a concrete boundary for it. Keep the first
-working interaction inside the existing web/mobile runtime so the demo has one
-clear process to start and verify.
+The whiteboard also mentions Go. Add a Go service only when the team has a
+concrete boundary for it. The audio MVP uses one local process to serve the
+prototype and the speech API.
 
 ## What is preserved locally
 
@@ -96,10 +106,61 @@ in pull requests and submission notes.
 
 ## Local setup
 
-The application scaffold has not been selected yet. This repository is
-intentionally limited to project notes and guardrails while the team builds
-from scratch. When the scaffold is added, document its exact prerequisites,
-install, and development commands here.
+Requires Node.js 22.14+ and pnpm 11. The dependency configuration enforces
+`minimumReleaseAge: 1440` before installation.
+
+```sh
+pnpm install --frozen-lockfile
+cp .env.example .env # Skip this line if you already have .env.
+```
+
+Enter your OpenRouter API key in the settings popup after starting the app.
+Alternatively, set `OPENROUTER_API_KEY` in `.env` before the first run. An
+optional `FISH_AUDIO_VOICE_ID` fixes the narrator to a particular Fish voice;
+blank uses the provider default. Keys stay on the server. Then:
+
+```sh
+pnpm dev
+```
+
+Open [the audio MVP](http://127.0.0.1:4310). Choose an original sample or add a
+DRM-free EPUB, then press Play. Narration progresses passage by passage, with
+pause/resume, chapter selection, playback speed, browser audio caching, and
+automatic position recovery. The companion still uses clearly labeled
+prepared demo answers; microphone and companion speech are outside this MVP.
+
+Keys entered in settings are saved to ignored `.data/audio-settings.json` on
+the local server and take effect immediately for both versions. Save/Remove
+overrides the `.env` key, including after a restart. The file uses owner-only
+permissions on macOS/Linux; it is not an encrypted OS keychain.
+Restart after changing voice/port settings in `.env`. For a previously built app use `pnpm start`.
+This is a loopback-only single-user runtime; authentication and device
+networking are required before making it reachable remotely.
+
+### Simplified team version
+
+The main app remains at `/`. A separate audio-enabled version of the simpler
+prototype is available at [the team reader](http://127.0.0.1:4310/simple/).
+Both run with `pnpm dev` and share the audio backend. See
+[the team integration guide](docs/audio/SIMPLE_READER.md) for ownership and storage boundaries.
+The original standalone prototype remains unchanged.
+
+### Verification
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm build
+# Generate disposable original EPUB fixtures for manual browser import:
+python3 scripts/create-test-epub.py
+# With the server running and a valid key, make one short live speech call:
+pnpm smoke:audio
+```
+
+The smoke output is ignored at `output/audio/fish-smoke.mp3`. Unit and HTTP
+tests use fixtures; they are separate from real Fish Audio verification.
+See [audio verification](docs/audio/VERIFICATION.md) for observed checks and
+remaining platform limits. Native Expo/Android verification is not claimed.
 
 The inherited starter reference can be inspected locally at `starter-kit/`.
 The source planning notes, UI prototype, and planning photos are checked in

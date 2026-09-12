@@ -1,0 +1,4 @@
+minimumReleaseAge: 1440
+storeDir: .pnpm-store
+allowBuilds:
+  esbuild@0.25.12: true

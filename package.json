@@ -1,0 +1,20 @@
+{
+  "name": "bookwormai-audio",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.14" },
+  "packageManager": "pnpm@11.0.9",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "pnpm build && node --env-file-if-exists=.env dist/server/index.js",
+    "start": "node --env-file-if-exists=.env dist/server/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "smoke:audio": "node scripts/smoke-audio.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.11",
+    "esbuild": "0.25.12",
+    "typescript": "5.9.3"
+  }
+}
