@@ -1,4 +1,4 @@
-// Explicit, bounded paid smoke check through the running local server. No text/key logs.
+// Explicit, bounded live smoke check through the running local server. No text/key logs.
 import { mkdir, writeFile } from 'node:fs/promises';
 const origin = process.env.AUDIO_ORIGIN || 'http://127.0.0.1:4310';
 const config = await fetch(`${origin}/api/audio/config`).then(response => response.json());

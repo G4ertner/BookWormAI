@@ -8,6 +8,9 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string) {
   let active = 0;
   const staticFiles: Record<string, [string, string]> = {
     '/': ['index.html', 'text/html; charset=utf-8'],
+    '/simple': ['simple.html', 'text/html; charset=utf-8'],
+    '/simple/': ['simple.html', 'text/html; charset=utf-8'],
+    '/assets/simple.js': ['simple.js', 'text/javascript; charset=utf-8'],
     '/assets/client.js': ['client.js', 'text/javascript; charset=utf-8'],
     '/assets/styles.css': ['styles.css', 'text/css; charset=utf-8'],
   };

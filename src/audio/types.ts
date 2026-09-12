@@ -44,7 +44,7 @@ export interface AssetRepository {
   invalidate?(asset: AudioAsset): Promise<void>;
 }
 
-export const MODEL = 'fish-audio/s2.1-pro';
+export const MODEL = 'fish-audio/s2.1-pro-free:free';
 export const MAX_PASSAGE_BYTES = 2400; // Deliberate app cap, not a provider-limit claim.
 
 export function splitPassage(text: string, maxBytes = MAX_PASSAGE_BYTES): string[] {

@@ -5,4 +5,6 @@ await build({ entryPoints: ['src/server/index.ts'], outfile: 'dist/server/index.
 await build({ entryPoints: ['src/web/client.ts'], outfile: 'dist/public/client.js', bundle: true, platform: 'browser', format: 'esm', target: 'es2022', sourcemap: false });
 await copyFile('src/web/index.html', 'dist/public/index.html');
 await copyFile('src/web/styles.css', 'dist/public/styles.css');
+await build({ entryPoints: ['src/simple/client.ts'], outfile: 'dist/public/simple.js', bundle: true, platform: 'browser', format: 'esm', target: 'es2022', sourcemap: false });
+await copyFile('src/simple/index.html', 'dist/public/simple.html');
 console.log('Built the audio server and replaceable prototype client.');

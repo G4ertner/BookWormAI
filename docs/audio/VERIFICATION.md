@@ -2,12 +2,26 @@
 
 Observed locally on 2026-09-12, branch `feature/eric-audio`.
 
-## Automated checks
+## Fish Free switch — 2026-09-12
+
+- User selected `fish-audio/s2.1-pro-free:free`; the running local server was restarted with that exact model. No paid-model fallback is configured.
+- Typecheck, build, and all 17 unit/HTTP tests passed after the switch.
+- `pnpm smoke:audio` returned `audio/mpeg`, 125,804 bytes, in 2,459 ms using the existing server key and the provider-default voice. The ignored smoke output now contains this free-model sample, replacing the earlier paid-model sample.
+- This verifies one real free-model generation. Earlier browser flow evidence below used the paid model; long-session playback and free-tier availability remain unverified.
+
+## Simplified team reader
+
+A separate `/simple/` surface now reuses the same audio controller and provider.
+The current main surface remains `/`. All 18 tests passed; live simplified-reader
+playback, reload recovery, speed, EPUB completion and chapter selection were
+observed. See [team reader acceptance](SIMPLE_READER.md#observed-acceptance--2026-09-12).
+
+## Initial audio MVP automated checks (before adding the simplified reader)
 
 - `pnpm typecheck` — passed.
 - `pnpm test` — 17 tests passed: Unicode passage limits; ordered generation and one-passage prefetch; pause, cancellation, retry, seek and exact-rendition resume; corrupt-cache invalidation; playback speed/mute; OpenRouter payload and sanitized failures; HTTP origin/body/profile validation, concurrency and disconnect cancellation.
 - `pnpm build` — passed; separate browser and server bundles produced.
-- `python3 /Users/ericq/.codex/skills/tie-project-memory/scripts/validate_tie.py TIE.md` — passed.
+- Local project-intent validation also passed; that workstation-specific check is not a teammate setup requirement.
 
 HTTP tests need permission to bind a loopback port in a restricted sandbox. The initial sandbox-only attempt could not bind; the permitted run passed. Tests use fixtures and do not call the paid provider.
 
@@ -30,3 +44,13 @@ The original source prototype remains unchanged. Generated audio, EPUB fixtures,
 - Actual rejected/exhausted OpenRouter keys and provider outages were simulated in tests, not intentionally triggered against a paid account.
 
 Next acceptance step: listen to a user-owned chapter for 20 minutes, exercise pause/reload/chapter changes, and choose a stable Fish voice if the provider default is unsuitable. See [the integration contract](INTEGRATION.md) to connect a different UI.
+
+## Team handoff reproducibility — 2026-09-12
+
+Exported the complete staged Git checkout into a clean temporary directory,
+without `.env`, `prototypes/`, local planning notes, `starter-kit/`, or existing
+build output. Installed with `pnpm install --offline --frozen-lockfile` using
+the workstation's existing pnpm store. Typecheck, all 18 tests and build passed
+from that directory. This proves the checked-in application is self-contained;
+it does not claim a fresh network download or another operating system was tested.
+A scan of all staged files found no occurrence of the configured OpenRouter key.

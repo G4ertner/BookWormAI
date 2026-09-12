@@ -3,8 +3,32 @@ import assert from 'node:assert/strict';
 import { createAudioServer } from '../src/server/app.ts';
 import { OpenRouterSpeech, SpeechError, validateText, type SpeechProvider } from '../src/server/speech.ts';
 import { MODEL } from '../src/audio/types.ts';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const mp3 = Buffer.concat([Buffer.from('ID3'), Buffer.alloc(50)]); // Header fixture, not playable speech.
+test('main and simplified pages remain separate behind the same safe static boundary', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'bookworm-surfaces-'));
+  await Promise.all([
+    writeFile(join(dir, 'index.html'), 'main reader'),
+    writeFile(join(dir, 'simple.html'), 'simple reader'),
+    writeFile(join(dir, 'simple.js'), 'simple client'),
+    writeFile(join(dir, '.env'), 'private fixture'),
+  ]);
+  const server = createAudioServer(new OpenRouterSpeech(''), dir);
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(async () => { await new Promise<void>(resolve => server.close(() => resolve())); await rm(dir, { recursive: true }); });
+  const address = server.address(); assert(address && typeof address !== 'string');
+  const origin = `http://127.0.0.1:${address.port}`;
+  for (const [path, expected] of [['/', 'main reader'], ['/simple/', 'simple reader'], ['/simple', 'simple reader'], ['/assets/simple.js', 'simple client']]) {
+    const response = await fetch(origin + path);
+    assert.equal(response.status, 200); assert.equal(await response.text(), expected);
+    assert(response.headers.get('content-security-policy')?.includes("script-src 'self'"));
+  }
+  assert.equal((await fetch(origin + '/simple/.env')).status, 404);
+  assert.equal((await fetch(origin + '/.env')).status, 404);
+});
 test('OpenRouter request uses selected model, MP3, server-only key and exact text', async () => {
   let requestBody: Record<string, string> = {};
   const provider = new OpenRouterSpeech('test-secret', 'voice-123', async (url, init) => {

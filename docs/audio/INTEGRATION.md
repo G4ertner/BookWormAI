@@ -40,7 +40,9 @@ See `src/web/client.ts` for the bridge. `src/web/prototype/ui.js` contains prese
 
 Required headers: `Content-Type: application/json`, `X-Bookworm-Client: audio-v1`. Response: MP3 bytes, with optional `X-Generation-Id`. Errors are `{ "error": { "code": "...", "message": "..." } }`. Private upstream error bodies are never forwarded. The route enforces a 2,400 UTF-8 byte app cap, a 16 KB JSON body cap, two concurrent requests, 90-second upstream deadline, and an 8 MB audio response cap. These are application limits rather than claims about provider limits.
 
-The backend always selects `fish-audio/s2.1-pro`, explicitly requests MP3, and adds the configured voice ID only when present. There is no hidden model fallback, browser speech fallback, or automatic retry loop that can repeatedly spend credit. Play after a failure is the explicit retry.
+The backend always selects `fish-audio/s2.1-pro-free:free`, explicitly requests MP3, and adds the configured voice ID only when present. There is no hidden model fallback, browser speech fallback, or automatic retry loop that can repeatedly spend credit. Play after a failure is the explicit retry.
+
+The free endpoint is rate limited and has no production latency or availability guarantee. This selection was verified in the [OpenRouter model listing](https://openrouter.ai/fish-audio/s2.1-pro-free:free) on 2026-09-12. No automatic fallback to a paid model is configured.
 
 ## Storage and privacy
 
@@ -66,7 +68,7 @@ pnpm typecheck
 pnpm test
 pnpm build
 python3 scripts/create-test-epub.py
-# With pnpm start running and a valid key; one small paid generation:
+# With pnpm start running and a valid key; one small live generation:
 pnpm smoke:audio
 ```
 

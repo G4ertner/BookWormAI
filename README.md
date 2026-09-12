@@ -6,8 +6,11 @@ into an audiobook-like reading experience: import a book, choose a chapter,
 listen to AI narration, and continue from the last reading position.
 
 > Status: the first audio MVP runs against the existing HTML prototype, using
-> Fish Audio S2.1 Pro through OpenRouter. Its backend and playback controller
+> Fish Audio S2.1 Pro Free through OpenRouter. Its backend and playback controller
 > are independent of the UI. The ignored `starter-kit/` remains reference only.
+
+**Team start here:** [Audio and simplified-reader handoff](docs/audio/TEAM_HANDOFF.md)
+includes fresh-checkout setup, editing boundaries, acceptance checks and next tasks.
 
 ## Product intent
 
@@ -126,6 +129,14 @@ Restart after changing `.env`. For a previously built app use `pnpm start`.
 This is a loopback-only single-user runtime; authentication and device
 networking are required before making it reachable remotely.
 
+### Simplified team version
+
+The main app remains at `/`. A separate audio-enabled version of the simpler
+prototype is available at [the team reader](http://127.0.0.1:4310/simple/).
+Both run with `pnpm dev` and share the audio backend. See
+[the team integration guide](docs/audio/SIMPLE_READER.md) for ownership and storage boundaries.
+The original standalone prototype remains unchanged.
+
 ### Verification
 
 ```sh
@@ -134,7 +145,7 @@ pnpm test
 pnpm build
 # Generate disposable original EPUB fixtures for manual browser import:
 python3 scripts/create-test-epub.py
-# With the server running and a funded key, make one short paid speech call:
+# With the server running and a valid key, make one short live speech call:
 pnpm smoke:audio
 ```
 
