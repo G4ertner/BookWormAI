@@ -76,9 +76,10 @@ npm ci --prefix apps/mobile
 
 ## Publish the team repository
 
-The local checkout still points at the public starter-kit repository as
-`origin` so its provenance is visible. After authenticating GitHub, create the
-team repository and repoint `origin` before pushing:
+The team repository is published at
+`https://github.com/G4ertner/BookWormAI`. For a fresh checkout before the
+initial publication, authenticate GitHub, create the repository, and repoint
+`origin` before pushing:
 
 ```bash
 gh auth login -h github.com
