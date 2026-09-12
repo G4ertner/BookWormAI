@@ -15,3 +15,6 @@ apps/mobile/.expo/
 
 # Web approval and attempt metadata (not task storage)
 .data/
+
+# Local reference copy of the inherited starter kit
+starter-kit/
