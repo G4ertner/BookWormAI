@@ -2,13 +2,15 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { SpeechError, validateText, type SpeechProvider } from './speech.ts';
+import { ExaRecommendations } from './recommendations.ts';
 import { validateApiKey } from './credentials.ts';
 import { validateSelection } from './narration.ts';
 import type { AudioSelection, AudioSettings, ProviderId } from '../audio/catalog.ts';
 
 /** Local single-user runtime. Authentication must be added before public hosting. */
-export function createAudioServer(provider: SpeechProvider, publicDir: string, updateKey?: (key: string, provider?: ProviderId) => Promise<void>, settings?: { read: () => AudioSettings; select: (selection: AudioSelection) => Promise<void> }) {
+export function createAudioServer(provider: SpeechProvider, publicDir: string, updateKey?: (key: string, provider?: ProviderId) => Promise<void>, settings?: { read: () => AudioSettings; select: (selection: AudioSelection) => Promise<void> }, recommendations = new ExaRecommendations()) {
   let active = 0;
+  let searching = false;
   let updatingKey = false;
   const staticFiles: Record<string, [string, string]> = {
     '/': ['simple.html', 'text/html; charset=utf-8'],
@@ -28,6 +30,25 @@ export function createAudioServer(provider: SpeechProvider, publicDir: string, u
     if (req.headers.origin && req.headers.origin !== `http://${req.headers.host}`) return json(res, 403, { error: { code: 'ORIGIN_DENIED', message: 'Cross-origin requests are not allowed.' } });
     if (req.headers['sec-fetch-site'] === 'cross-site') return json(res, 403, { error: { code: 'ORIGIN_DENIED', message: 'Cross-site requests are not allowed.' } });
     const path = new URL(req.url ?? '/', 'http://localhost').pathname;
+    if (req.method === 'GET' && path === '/api/books/recommendations/config') return json(res, 200, { configured: recommendations.configured });
+    if (req.method === 'POST' && path === '/api/books/recommendations') {
+      const controller = new AbortController();
+      const disconnected = () => { if (!res.writableEnded) controller.abort(); };
+      let counted = false;
+      res.on('close', disconnected);
+      try {
+        if (req.headers['x-bookworm-client'] !== 'audio-v1' || !req.headers['content-type']?.startsWith('application/json')) throw new SpeechError('INVALID_REQUEST', 'Use the book recommendation form.', 400);
+        if (searching) throw new SpeechError('SEARCH_BUSY', 'A book search is already running. Wait and retry.', 429);
+        searching = true; counted = true;
+        const result = await recommendations.search(await readJson(req), controller.signal);
+        if (!controller.signal.aborted) json(res, 200, result);
+      } catch (error) {
+        if (res.destroyed) return;
+        const safe = error instanceof SpeechError ? error : new SpeechError('SEARCH_UNAVAILABLE', 'Book search is unavailable. Please retry.', 503);
+        json(res, safe.status, { error: { code: safe.code, message: safe.message } });
+      } finally { if (counted) searching = false; res.removeListener('close', disconnected); }
+      return;
+    }
     if ((path === '/api/audio/key' && ['PUT', 'DELETE'].includes(req.method ?? '')) || (path === '/api/audio/selection' && req.method === 'PUT')) {
       let locked = false;
       try {

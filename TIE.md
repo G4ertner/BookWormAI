@@ -8,6 +8,9 @@
   share source; the earlier main UI and standalone search prototype are retired.
 - Users bring their own OpenRouter or OpenAI key. Keep providers explicit and keys
   separate, with no service-operated AI billing or silent provider fallback.
+- Recommend free Project Gutenberg books from an explicit reading interest using Exa
+  search, with source links and the existing import flow. Search credentials are
+  independent of narration; do not send the shelf or book text for recommendations.
 - Keep narration progressive; never wait for full-book conversion before playback.
 
 ## Taste

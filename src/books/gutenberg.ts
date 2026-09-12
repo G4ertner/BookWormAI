@@ -49,6 +49,7 @@ interface CatalogHost {
 
 interface CatalogController {
   render(): void;
+  showRecommendation(book: { gid: number; title: string }): void;
   search(query: string, append?: boolean): Promise<void>;
   add(gid: number): void;
   download(gid: number): void;
@@ -446,8 +447,8 @@ interface CatalogController {
       // Catalogue metadata beats what is embedded in the file, which often
       // carries subtitles, translators and "(Illustrated)".
       book.gutenbergId = source.gid;
-      book.title = source.title;
-      book.author = source.author;
+      // Recommendation hits carry page titles, not authoritative book metadata.
+      if (source.author) { book.title = source.title; book.author = source.author; }
       book.style = ['', 'blue', 'ochre', 'clay'][source.gid % 4];
       book.art = 'book';
       book.sample = false;
@@ -586,6 +587,14 @@ interface CatalogController {
 
     return {
       render,
+      showRecommendation(book) {
+        request?.abort(); request = null;
+        cancelPending();
+        results = [{ gid: book.gid, title: book.title, author: '', thumbnail: '' }];
+        nextUrl = '';
+        render();
+        setStatus('Your chosen book. Add downloads an EPUB; choose the saved file to finish.');
+      },
       search,
       add,
       download,
