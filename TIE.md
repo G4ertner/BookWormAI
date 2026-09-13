@@ -10,7 +10,9 @@
   separate, with no service-operated AI billing or silent provider fallback.
 - Recommend free Project Gutenberg books from an explicit reading interest using Exa
   search, with source links and the existing import flow. Search credentials are
-  independent of narration; do not send the shelf or book text for recommendations.
+  independent of narration. Only the interest the reader submits is sent: either typed,
+  or, on explicit request, the titles and authors of up to three books they added.
+  Never book text, and never the shelf without that request.
 - Keep narration progressive; never wait for full-book conversion before playback.
 - A reading companion uses Gemini 2.5 Flash through OpenRouter to explain and discuss
   the loaded book, retrieve supporting passages and preserve the reader's place.
@@ -48,8 +50,9 @@
   narrator-direction preview in this slice. Keep old prototypes in Git history or ignored local archives.
 - Local Node stays loopback-only. Hosted public access uses isolated expiring browser
   sessions, server-side keys and API limits; never supply a public shared provider key.
-- Books/audio/progress remain browser-local; `.env`, `.data/`, generated audio and personal
-  files stay outside commits. Cleanup must not destroy existing user books or credentials.
+- Books/audio/progress remain browser-local. The one exception is the shelf titles and
+  authors a reader explicitly submits as a recommendation interest; `.env`, `.data/`,
+  generated audio and personal files stay outside commits. Cleanup must not destroy existing user books or credentials.
 - Keep development reasoning host-agent native. Scripts handle deterministic building,
   testing and artifact generation. The explicitly scoped in-app reading companion
   is a product inference capability; it does not move development reasoning into scripts.

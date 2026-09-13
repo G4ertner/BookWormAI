@@ -9,7 +9,9 @@ and `PROJECT_STATE.md`. Gutenberg books are free; Exa API usage may require cred
 1. In Library, open **Add book → For you**.
 2. Open **Recommendation settings**, enter your **Exa API key**, and **Save Exa key**.
    Close settings and return to **Add book → For you**. Describe a topic or mood,
-   or select a reading idea, then **Find books**.
+   or select a reading idea, then **Find books**. Once you have added at least one
+   book of your own, **Find books like my shelf** runs the same search from your
+   three newest books in one click.
 3. Read the source excerpt/link and **Choose book**. The Gutenberg tab presents
    that book; **Add** uses the existing EPUB download and file-picker flow.
 4. Open the imported book from the shelf to read/listen as usual.
@@ -33,7 +35,9 @@ the running BookWormAI application an API credential.
 - `PUT /api/books/recommendations/key` saves `{ apiKey: string }`; `DELETE` with `{}`
   removes it. Both require JSON and the existing client header. Keys are write-only.
 - `POST /api/books/recommendations` accepts `{ query: string }` with 3–300 characters,
-  JSON content type and the existing `X-Bookworm-Client: audio-v1` header.
+  JSON content type and the existing `X-Bookworm-Client: audio-v1` header. This contract
+  is unchanged by the shelf button, which only composes a query in the browser; there is
+  no separate route, key or stored history for it.
 - The shared service uses Exa `POST /search`, `type: auto`, twelve candidates,
   `includeDomains: ["gutenberg.org/ebooks/"]`, and source highlights. It returns at
   most six unique, canonical Gutenberg book-page URLs, page titles and excerpts.
@@ -41,8 +45,15 @@ the running BookWormAI application an API credential.
   recommendations. Results can vary in relevance and omit books Exa has not indexed.
   Excerpts are labeled as source text. Exa's page-author field is not treated as a
   book author; EPUB metadata is preserved when importing a recommendation.
-- Only the submitted interest is sent. There is no automatic search on typing,
-  shelf upload, full-book upload, new reasoning service or additional dependency.
+- Only the submitted interest is sent. **Find books like my shelf** composes that
+  interest in the browser from the titles and authors of the three books most recently
+  added, newest first, capped to 80 and 60 characters per field and 300 overall. The
+  bundled sample books are excluded, so a shelf holding only samples reports that
+  instead of searching, and the importers' placeholder authors ("Your personal library",
+  "From your personal library") are dropped rather than sent as an author. The composed
+  text is written into the visible query field.
+  There is still no automatic search on typing, no shelf or full-book upload, no book
+  text, no chapter or book identifiers, no new reasoning service and no new dependency.
 - Local requests use existing host/origin/body guards, a single concurrent search,
   a 20-second upstream timeout and disconnect cancellation. Upstream error bodies
   are never forwarded. Invalid/missing keys, credits, rate limits, network failures,
@@ -61,7 +72,14 @@ through the Exa plugin on September 12, 2026. The integration uses native `fetch
 Run `pnpm check`: typecheck, local and Worker builds, application and Worker tests.
 HTTP tests require permission to bind loopback sockets. Tests cover input validation,
 provider errors, session isolation, write-only keys, removal, expiry, search concurrency,
-local persistence and disabling the environment fallback.
+local persistence and disabling the environment fallback. `shelfQuery` is covered by
+feeding its output back through `recommendationQuery`, so the two independent 300-character
+limits cannot drift apart.
+
+`pnpm check` cannot prove the shelf button is wired. `src/simple/ui.js` is untyped
+JavaScript and `src/assets.d.ts` declares `*.js` untyped, so a missing `shelfBooks`
+callback typechecks clean and fails only in the browser. Clicking the button in a real
+browser is required evidence for this feature, not an optional extra.
 
 Browser checks used isolated servers with no real API keys: the production missing-key
 path and a fixture-backed Exa adapter. Verified recommendation prompts/results,
