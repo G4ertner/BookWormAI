@@ -206,6 +206,10 @@ Installation references above were checked on September 12, 2026.
 - **Add book → For you:** describe a topic or mood to find Gutenberg book matches.
   Open **Recommendation settings**, paste your **Exa API key**, and choose **Save Exa key**.
   This works locally and on the hosted demo; narration keys are separate.
+  Once you have added books of your own, **Find books like my shelf** searches from
+  them in one click. It sends the titles and authors of your three newest books and
+  fills them into the box so you can see what was sent; your book text is never sent.
+  The sample books that ship with the reader are not used.
   Choose a result to continue through the existing Gutenberg import flow.
   See [recommendation setup and limits](docs/BOOK_RECOMMENDATIONS.md).
 - Open the book on your shelf, select a chapter, and press Play. Narration prepares

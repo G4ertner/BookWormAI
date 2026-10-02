@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ExaRecommendations, parseRecommendations } from '../src/server/recommendations.ts';
+import { ExaRecommendations, parseRecommendations, recommendationQuery } from '../src/server/recommendations.ts';
+import { shelfQuery } from '../src/books/recommendations.ts';
 import { createAudioServer } from '../src/server/app.ts';
 import { OpenRouterSpeech, SpeechError } from '../src/server/speech.ts';
 
@@ -21,6 +22,23 @@ test('Exa search sends only the explicit interest and keeps its key server-side'
   assert.equal(result.books[0]?.gid, 123);
   assert.equal(result.books[0]?.title, 'A book by An Author');
   assert(!JSON.stringify(result).includes('fixture-key'));
+});
+
+const control = (...codes: number[]) => String.fromCharCode(...codes);
+test('a shelf interest uses the newest books and always satisfies the query contract', () => {
+  const shelf = [{title:'The Odyssey',author:'Homer'},{title:'Frankenstein',author:'Mary Shelley'},{title:'Dracula',author:'Bram Stoker'},{title:'Walden',author:'Henry David Thoreau'}];
+  assert.equal(shelfQuery(shelf), 'Books like Walden by Henry David Thoreau; Dracula by Bram Stoker; Frankenstein by Mary Shelley');
+  assert.equal(shelfQuery([{title:` Alice${control(9)}in${control(10)}Wonderland `,author:`Lewis${control(0)} Carroll`}]), 'Books like Alice in Wonderland by Lewis Carroll');
+  assert.equal(shelfQuery([{title:'Untitled',author:'  '}]), 'Books like Untitled');
+  // A shelf with nothing usable stays empty, so the button reports it instead of searching.
+  for (const empty of [[], [{title:'   ',author:'Nobody'}], [{title:control(0,31),author:''}]]) assert.equal(shelfQuery(empty), '');
+  // The 300-character cap lives in two places by design; prove they agree rather than share a constant.
+  const long = {title:'T'.repeat(180), author:'A'.repeat(180)};
+  for (const shelved of [shelf, [long, long, long], [long, {title:'Short',author:'A N Other'}]]) {
+    const term = shelfQuery(shelved);
+    assert(term.length >= 3 && term.length <= 300);
+    assert.equal(recommendationQuery({ query: term }), term);
+  }
 });
 
 test('only safe canonical book pages survive; duplicates and non-book results are discarded', () => {
